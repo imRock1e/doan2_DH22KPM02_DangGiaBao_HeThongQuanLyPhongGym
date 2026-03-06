@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Danh sách khách</h1>
+
+    <a href="/new-customer">Thêm khách</a>
+    <ul id="list"></ul>
+
+    <script>
+      async function loadCustomers() {
+        const res = await fetch("/api/customers");
+
+        const data = await res.json();
+
+        const list = document.getElementById("list");
+
+        list.innerHTML = "";
+
+        data.forEach((c) => {
+          const li = document.createElement("li");
+
+          li.innerHTML = `
+${c.id} - ${c.name}
+<a href="/edit-customer?id=${c.id}">Sửa</a>
+`;
+
+          list.appendChild(li);
+        });
+      }
+
+      loadCustomers();
+    </script>
+  </body>
+</html>

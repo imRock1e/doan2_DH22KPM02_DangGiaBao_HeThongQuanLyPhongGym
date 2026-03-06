@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Thêm khách</h1>
+
+    <form id="form">
+      Tên<br />
+      <input name="name" /><br />
+
+      SĐT<br />
+      <input name="phone" /><br /><br />
+
+      <video id="video" width="300" autoplay></video><br />
+      <button type="button" onclick="capture()">Chụp</button><br /><br />
+
+      <canvas id="canvas" width="300" height="200"></canvas><br />
+
+      <button>Save</button>
+    </form>
+
+    <script>
+      const video = document.getElementById("video");
+
+      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+        video.srcObject = stream;
+      });
+
+      function capture() {
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(video, 0, 0, 300, 200);
+      }
+
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+
+        const canvas = document.getElementById("canvas");
+
+        canvas.toBlob(async (blob) => {
+          const formData = new FormData();
+
+          formData.append("name", e.target.name.value);
+          formData.append("phone", e.target.phone.value);
+
+          if (blob) formData.append("image", blob, "photo.png");
+
+          await fetch("/api/customers", {
+            method: "POST",
+            body: formData,
+          });
+
+          location.href = "/admin-customer";
+        });
+      };
+    </script>
+  </body>
+</html>

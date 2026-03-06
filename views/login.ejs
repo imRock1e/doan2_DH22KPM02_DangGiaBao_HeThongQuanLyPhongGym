@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+  </head>
+  <body>
+    <form id="loginForm">
+      <label>Số điện thoại</label>
+      <input type="text" id="phone" name="phone" required placeholder="Nhập SĐT" />
+      <label>Mật khẩu</label>
+      <input type="password" id="password" name="password" required placeholder="••••••••" />
+      <button type="submit">ĐĂNG NHẬP</button>
+    </form>
+    <p id="error"></p>
+  </body>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault(); // chặn reload
+
+      const phone = document.getElementById("phone").value;
+      const password = document.getElementById("password").value;
+
+      const res = await fetch("/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phone, password }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.user.role == "admin") {
+        window.location.href = "/admin-index";
+      } else if (data.success && data.user.role == "user") {
+        window.location.href = "/index";
+      } else {
+        document.getElementById("error").innerText = "Sai tài khoản hoặc mật khẩu";
+      }
+    });
+  </script>
+</html>

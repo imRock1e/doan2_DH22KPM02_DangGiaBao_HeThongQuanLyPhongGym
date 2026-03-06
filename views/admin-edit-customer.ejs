@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Sửa khách</h1>
+
+    <form id="form">
+      ID<br />
+      <input id="id" readonly /><br />
+
+      Tên<br />
+      <input id="name" /><br />
+
+      SĐT<br />
+      <input id="phone" /><br />
+
+      Ngày bắt đầu<br />
+      <input type="date" id="start" /><br />
+
+      Ngày kết thúc<br />
+      <input type="date" id="end" /><br />
+
+      Trạng thái<br />
+      <input id="status" /><br />
+
+      Note<br />
+      <textarea id="note"></textarea><br />
+
+      <img id="image" width="200" /><br /><br />
+
+      <button>SAVE</button>
+      <button type="button" onclick="deleteCustomer()">DELETE</button>
+    </form>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+
+      const id = params.get("id");
+
+      async function load() {
+        const res = await fetch("/api/customers/" + id);
+
+        const c = await res.json();
+
+        document.getElementById("id").value = c.id;
+        document.getElementById("name").value = c.name;
+        document.getElementById("phone").value = c.phone;
+        document.getElementById("start").value = c.start_date;
+        document.getElementById("end").value = c.end_date;
+        document.getElementById("status").value = c.status;
+        document.getElementById("note").value = c.note;
+
+        if (c.image) document.getElementById("image").src = "/uploads/" + c.image;
+      }
+
+      load();
+
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById("name");
+        const phoneInput = document.getElementById("phone");
+        const startInput = document.getElementById("start");
+        const endInput = document.getElementById("end");
+        const statusInput = document.getElementById("status");
+        const noteInput = document.getElementById("note");
+
+        await fetch("/api/customers/" + id, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: nameInput.value,
+            phone: phoneInput.value,
+            start_date: startInput.value,
+            end_date: endInput.value,
+            status: statusInput.value,
+            note: noteInput.value,
+          }),
+        });
+
+        alert("Saved");
+      };
+
+      async function deleteCustomer() {
+        await fetch("/api/customers/" + id, {
+          method: "DELETE",
+        });
+
+        location.href = "/admin-customer";
+      }
+    </script>
+  </body>
+</html>

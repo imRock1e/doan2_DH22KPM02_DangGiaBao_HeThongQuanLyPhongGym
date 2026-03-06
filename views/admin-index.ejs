@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dashboard</title>
+  </head>
+
+  <body>
+    <h1>Dashboard</h1>
+
+    <p>Xin chào admin: <span id="username"></span></p>
+
+    <button onclick="logout()">Logout</button>
+
+    <script>
+      async function loadUser() {
+        const res = await fetch("/me");
+        const data = await res.json();
+
+        if (!data.logged) {
+          window.location.href = "/login";
+          return;
+        }
+
+        document.getElementById("username").innerText = data.user.phone;
+      }
+
+      async function logout() {
+        await fetch("/logout");
+
+        window.location.href = "/login";
+      }
+      loadUser();
+    </script>
+  </body>
+</html>

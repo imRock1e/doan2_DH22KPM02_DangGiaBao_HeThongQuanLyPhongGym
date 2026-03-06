@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quản lý khách</title>
+  </head>
+
+  <body>
+    <h1>Danh sách khách</h1>
+
+    <ul id="customerList"></ul>
+
+    <h2>Thêm khách mới</h2>
+
+    <form id="addForm">
+      <label>Tên</label>
+      <input type="text" id="newName" required />
+
+      <label>Số điện thoại</label>
+      <input type="text" id="newPhone" required />
+
+      <button type="submit">Thêm</button>
+    </form>
+
+    <h2>Sửa thông tin khách</h2>
+
+    <form id="editForm">
+      <label>ID</label>
+      <input type="text" id="id" readonly />
+
+      <label>Tên</label>
+      <input type="text" id="name" />
+
+      <label>SĐT</label>
+      <input type="text" id="phone" />
+
+      <label>Ngày bắt đầu</label>
+      <input type="date" id="start" />
+
+      <label>Ngày kết thúc</label>
+      <input type="date" id="end" />
+
+      <label>Trạng thái</label>
+      <select id="status">
+        <option value="active">Active</option>
+        <option value="expired">Expired</option>
+      </select>
+
+      <label>Note</label>
+      <textarea id="note"></textarea>
+
+      <br /><br />
+
+      <button type="button" onclick="saveCustomer()">Save</button>
+      <button type="button" onclick="deleteCustomer()">Delete</button>
+    </form>
+
+    <script>
+      let customers = [
+        { id: 1, name: "Nguyễn Văn A", phone: "0900000001", start: "2026-01-01", end: "2026-06-01", status: "active", note: "" },
+        { id: 2, name: "Trần Văn B", phone: "0900000002", start: "2026-02-01", end: "2026-07-01", status: "active", note: "VIP" },
+      ];
+
+      function renderList() {
+        const list = document.getElementById("customerList");
+        list.innerHTML = "";
+
+        customers.forEach((c) => {
+          const li = document.createElement("li");
+
+          li.innerText = c.id + " - " + c.name;
+
+          li.onclick = () => loadCustomer(c.id);
+
+          list.appendChild(li);
+        });
+      }
+
+      function loadCustomer(id) {
+        const c = customers.find((x) => x.id === id);
+
+        document.getElementById("id").value = c.id;
+        document.getElementById("name").value = c.name;
+        document.getElementById("phone").value = c.phone;
+        document.getElementById("start").value = c.start;
+        document.getElementById("end").value = c.end;
+        document.getElementById("status").value = c.status;
+        document.getElementById("note").value = c.note;
+      }
+
+      function saveCustomer() {
+        const id = parseInt(document.getElementById("id").value);
+
+        const c = customers.find((x) => x.id === id);
+
+        c.name = document.getElementById("name").value;
+        c.phone = document.getElementById("phone").value;
+        c.start = document.getElementById("start").value;
+        c.end = document.getElementById("end").value;
+        c.status = document.getElementById("status").value;
+        c.note = document.getElementById("note").value;
+
+        renderList();
+
+        alert("Đã lưu");
+      }
+
+      function deleteCustomer() {
+        const id = parseInt(document.getElementById("id").value);
+
+        customers = customers.filter((x) => x.id !== id);
+
+        renderList();
+
+        document.getElementById("editForm").reset();
+      }
+
+      document.getElementById("addForm").onsubmit = function (e) {
+        e.preventDefault();
+
+        const name = document.getElementById("newName").value;
+        const phone = document.getElementById("newPhone").value;
+
+        const newCustomer = {
+          id: Date.now(),
+          name,
+          phone,
+          start: "",
+          end: "",
+          status: "active",
+          note: "",
+        };
+
+        customers.push(newCustomer);
+
+        renderList();
+
+        this.reset();
+      };
+
+      renderList();
+    </script>
+  </body>
+</html>
