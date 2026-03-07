@@ -7,7 +7,8 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-////////DB
+
+// 1. KẾT NỐI DATABASE
 const db = new pg.Client({
   user: "postgres",
   host: "localhost",
@@ -21,7 +22,7 @@ db.connect();
 const app = express();
 const port = 3000;
 
-////////USE
+// 2. MIDDLEWARES & CẤU HÌNH PHỤC VỤ FILE TĨNH
 app.use(
   session({
     secret: "secret",
@@ -29,13 +30,12 @@ app.use(
     saveUninitialized: false,
   })
 );
-app.use(express.static("public"));
+app.use(express.static("public")); // Thư mục chứa CSS/JS frontend
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static("uploads")); // Cho phép truy cập ảnh qua URL: /uploads/ten-file.png
 
-////////CONFIG
-//////UPLOAD
+// 3. CẤU HÌNH MULTER (XỬ LÝ UPLOAD ẢNH)
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
@@ -44,9 +44,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-////////FUNCTION
-/////GET
-//GET USER
+// 4. CÁC HÀM TRUY VẤN (HELPER FUNCTIONS)
+// Lấy toàn bộ tài khoản
 async function getUsers() {
   try {
     const result = await db.query("SELECT * FROM account ORDER BY id ASC");
@@ -56,6 +55,8 @@ async function getUsers() {
     console.log("co loi getUsers");
   }
 }
+
+// Kiểm tra tài khoản qua SĐT
 async function getUserByPhone(phone) {
   try {
     const result = await db.query("SELECT * FROM account WHERE phone = $1", [phone]);
@@ -67,7 +68,7 @@ async function getUserByPhone(phone) {
   }
 }
 
-//GET CUSTOMERS
+// Lấy toàn bộ khách hàng
 async function getCustomer() {
   try {
     const result = await db.query("SELECT * FROM guest ORDER BY id ASC");
@@ -77,6 +78,8 @@ async function getCustomer() {
     console.log("co loi getCustomer");
   }
 }
+
+// Kiểm tra khách hàng qua ID
 async function getCustomerByID(id) {
   try {
     const result = await db.query("SELECT * FROM guest WHERE id = $1", [id]);
@@ -87,6 +90,8 @@ async function getCustomerByID(id) {
     console.log("co loi getCustomerByID");
   }
 }
+
+// Kiểm tra khách hàng qua SĐT
 async function getCustomerByPhone(phone) {
   try {
     const result = await db.query("SELECT * FROM guest WHERE phone = $1", [phone]);
@@ -98,8 +103,7 @@ async function getCustomerByPhone(phone) {
   }
 }
 
-////////METHOD
-//////GET
+// 5. CÁC ROUTE ĐIỀU HƯỚNG GIAO DIỆN (GET)
 ////LOGIN
 app.get("/login", (req, res) => {
   res.render("login.ejs");
@@ -124,8 +128,8 @@ app.get("/edit-customer", (req, res) => {
   res.render("admin-edit-customer.ejs");
 });
 
-//////API
-////LOGIN
+// 6. HỆ THỐNG API CHÍNH
+// API Đăng nhập
 app.post("/auth/login", async (req, res) => {
   const phone = req.body.phone;
   const password = req.body.password;
@@ -159,12 +163,14 @@ app.get("/me", (req, res) => {
     user: req.session.user,
   });
 });
-////CUSTOMER
+
+// API Lấy danh sách khách hàng
 app.get("/api/customers", async (req, res) => {
   const customers = await getCustomer();
   res.json(customers);
 });
 
+// API Lấy cụ thể khách hàng
 app.get("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
@@ -175,6 +181,7 @@ app.get("/api/customers/:id", async (req, res) => {
   res.json(customer[0]);
 });
 
+// API Thêm mới khách hàng
 app.post("/api/customers", upload.single("image"), async (req, res) => {
   const { name, phone } = req.body;
 
@@ -218,6 +225,7 @@ app.post("/api/customers", upload.single("image"), async (req, res) => {
   res.json({ success: true, id: newID });
 });
 
+// API XÓA KHÁCH HÀNG
 app.delete("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const query = `
