@@ -228,24 +228,19 @@ app.post("/api/customers", upload.single("image"), async (req, res) => {
 // API XÓA KHÁCH HÀNG
 app.delete("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const query = `
-DELETE FROM guest
-WHERE id = $1
-RETURNING *;
-`;
-  const values = [id];
-  const result = await db.query(query, values);
 
-  const query_account = `
-DELETE FROM account
-WHERE id_guest = $1
-RETURNING *;
-`;
-  const values_account = [id];
-  const result_account = await db.query(query_account, values_account);
-  res.json({ message: "Deleted" });
+  // Lưu ý: Nên xóa account trước vì có khóa ngoại ID_Guest
+  await db.query("DELETE FROM account WHERE id_guest = $1", [id]);
+
+  // Kiểm tra xem có file ảnh không để xóa vật lý trong folder uploads
+  const imagePath = path.join("uploads/", `${id}.png`);
+  if (fs.existsSync(imagePath)) {
+    fs.unlinkSync(imagePath);
+  }
+
+  await db.query("DELETE FROM guest WHERE id = $1", [id]);
+  res.json({ message: "Đã xóa khách hàng và ảnh liên quan" });
 });
-
 ////////LISTEN
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
