@@ -18,24 +18,17 @@
     <script>
        document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
+        const nameInput = document.getElementById("name");
+        const phoneInput = document.getElementById("phone");
 
-        const canvas = document.getElementById("canvas");
-
-        canvas.toBlob(async (blob) => {
-          const formData = new FormData();
-
-          formData.append("name", e.target.name.value);
-          formData.append("phone", e.target.phone.value);
-
-          if (blob) formData.append("image", blob, "photo.png");
-
-          await fetch("/api/staffs", {
+          await fetch("/api/staff", {
             method: "POST",
-            body: formData,
-          });
-
-          location.href = "/admin/staff";
-        });
+            body: JSON.stringify({
+                name: nameInput.value,
+                phone: phoneInput.value,
+            }),
+        }),
+        location.href = "/admin/staff";
       };
     </script>
   </body>

@@ -185,12 +185,12 @@ app.get("/me", (req, res) => {
 
 // API Khách Hàng
 // API Lấy danh sách khách hàng
-app.get("/api/customers", async (req, res) => {
+app.get("/api/customer", async (req, res) => {
   const customers = await getCustomer();
   res.json(customers);
 });
 // API Lấy cụ thể khách hàng
-app.get("/api/customers/:id", async (req, res) => {
+app.get("/api/customer/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
   const customer = await getCustomerByID(id);
@@ -200,7 +200,7 @@ app.get("/api/customers/:id", async (req, res) => {
   res.json(customer[0]);
 });
 // API Thêm mới khách hàng
-app.post("/api/customers", upload.single("image"), async (req, res) => {
+app.post("/api/customer", upload.single("image"), async (req, res) => {
   const { name, phone } = req.body;
 
   // 1. Kiểm tra SĐT
@@ -243,7 +243,7 @@ app.post("/api/customers", upload.single("image"), async (req, res) => {
   res.json({ success: true, id: newID });
 });
 // API Xóa Khách Hàng
-app.delete("/api/customers/:id", async (req, res) => {
+app.delete("/api/customer/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
   // Lưu ý: Nên xóa account trước vì có khóa ngoại ID_Guest

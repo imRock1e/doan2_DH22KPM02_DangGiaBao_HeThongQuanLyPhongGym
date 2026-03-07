@@ -42,7 +42,7 @@
       const id = params.get("id");
 
       async function load() {
-        const res = await fetch("/api/customers/" + id);
+        const res = await fetch("/api/customer/" + id);
 
         const c = await res.json();
 
@@ -68,7 +68,7 @@
         const statusInput = document.getElementById("status");
         const noteInput = document.getElementById("note");
 
-        await fetch("/api/customers/" + id, {
+        await fetch("/api/customer/" + id, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -87,7 +87,7 @@
       };
 
       async function deleteCustomer() {
-        await fetch("/api/customers/" + id, {
+        await fetch("/api/customer/" + id, {
           method: "DELETE",
         });
 
