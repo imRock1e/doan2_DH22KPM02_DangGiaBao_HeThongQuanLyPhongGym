@@ -10,24 +10,28 @@
 
     <form id="form">
       Tên<br />
-      <input name="name" /><br />
+      <input id="name" name="name" /><br />
 
       SĐT<br />
-      <input name="phone" /><br /><br />
-
+      <input id="phone" name="phone" /><br /><br />
+      <button>Save</button>
+    </form>
     <script>
-       document.getElementById("form").onsubmit = async (e) => {
+      document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
         const nameInput = document.getElementById("name");
         const phoneInput = document.getElementById("phone");
 
-          await fetch("/api/staff", {
-            method: "POST",
-            body: JSON.stringify({
-                name: nameInput.value,
-                phone: phoneInput.value,
-            }),
-        }),
+        await fetch("/api/staff", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: nameInput.value,
+            phone: phoneInput.value,
+          }),
+        });
         location.href = "/admin/staff";
       };
     </script>

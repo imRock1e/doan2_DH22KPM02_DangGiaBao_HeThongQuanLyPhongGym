@@ -49,8 +49,8 @@
         document.getElementById("id").value = c.id;
         document.getElementById("name").value = c.name;
         document.getElementById("phone").value = c.phone;
-        document.getElementById("start").value = c.start_date;
-        document.getElementById("end").value = c.end_date;
+        document.getElementById("start").value = c.start_date.split("T")[0];
+        document.getElementById("end").value = c.end_date.split("T")[0];
         document.getElementById("status").value = c.status;
         document.getElementById("note").value = c.note;
 
@@ -83,7 +83,7 @@
           }),
         });
 
-        alert("Saved");
+        location.href = "/admin/customer/edit?id=" + id;
       };
 
       async function deleteCustomer() {
@@ -91,7 +91,7 @@
           method: "DELETE",
         });
 
-        location.href = "/admin-customer";
+        location.href = "/admin/customer";
       }
     </script>
   </body>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Sửa Nhân Viên</h1>
+
+    <form id="form">
+      ID<br />
+      <input id="id" name="id" readonly /><br />
+
+      Tên<br />
+      <input id="name" name="name" /><br />
+
+      SĐT<br />
+      <input id="phone" name="phone" /><br />
+
+      <button>SAVE</button>
+      <button type="button" onclick="deleteCustomer()">DELETE</button>
+    </form>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+
+      const id = params.get("id");
+
+      async function load() {
+        const res = await fetch("/api/staff/" + id);
+
+        const s = await res.json();
+
+        document.getElementById("id").value = s.id;
+        document.getElementById("name").value = s.name;
+        document.getElementById("phone").value = s.phone;
+      }
+
+      load();
+
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById("name");
+        const phoneInput = document.getElementById("phone");
+
+        await fetch("/api/staff/" + id, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: nameInput.value,
+            phone: phoneInput.value,
+          }),
+        });
+
+        location.href = "/admin/staff/edit?id=" + id;
+      };
+
+      async function deleteCustomer() {
+        await fetch("/api/staff/" + id, {
+          method: "DELETE",
+        });
+
+        location.href = "/admin/staff";
+      }
+    </script>
+  </body>
+</html>

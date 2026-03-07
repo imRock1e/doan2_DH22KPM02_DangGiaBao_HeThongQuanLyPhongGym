@@ -110,6 +110,17 @@ async function getStaff() {
     console.log("co loi getStaff");
   }
 }
+// Kiểm tra khách hàng qua ID
+async function getStaffByID(id) {
+  try {
+    const result = await db.query("SELECT * FROM receptionist WHERE id = $1", [id]);
+    let staff = result.rows;
+    return staff;
+  } catch (error) {
+    console.log(error);
+    console.log("co loi getStaffByID");
+  }
+}
 
 // 5. CÁC ROUTE ĐIỀU HƯỚNG GIAO DIỆN (GET)
 ////LOGIN
@@ -192,11 +203,8 @@ app.get("/api/customer", async (req, res) => {
 // API Lấy cụ thể khách hàng
 app.get("/api/customer/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-
   const customer = await getCustomerByID(id);
-
   if (!customer) return res.status(404).json({ message: "Not found" });
-
   res.json(customer[0]);
 });
 // API Thêm mới khách hàng
@@ -240,7 +248,26 @@ app.post("/api/customer", upload.single("image"), async (req, res) => {
   `;
   await db.query(query_account, [phone, "123455", "user", newID]);
 
-  res.json({ success: true, id: newID });
+  res.json({ success: true });
+});
+//API Sửa khách hàng
+app.put("/api/customer/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, phone, start_date, end_date, status, note } = req.body;
+  const query = `
+UPDATE guest
+SET 
+    name = $1,
+    phone = $2,
+    start_date = $3,
+    end_date = $4,
+    status = $5,
+    note = $6
+WHERE id = $7
+`;
+  const values = [name, phone, start_date, end_date, status, note, id];
+  await db.query(query, values);
+  res.json({ message: "Đã sửa khách hàng" });
 });
 // API Xóa Khách Hàng
 app.delete("/api/customer/:id", async (req, res) => {
@@ -267,55 +294,49 @@ app.delete("/api/customer/:id", async (req, res) => {
 
 //API Nhân Viên
 // API Lấy danh sách Nhân Viên
-app.get("/api/staffs", async (req, res) => {
-  const staffs = await getStaffs();
+app.get("/api/staff", async (req, res) => {
+  const staffs = await getStaff();
   res.json(staffs);
 });
 // API Lấy cụ thể Nhân Viên
+app.get("/api/staff/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const staff = await getStaffByID(id);
+  if (!staff) return res.status(404).json({ message: "Not found" });
+  res.json(staff[0]);
+});
 // API Thêm mới Nhân Viên
-app.post("/api/customers", upload.single("image"), async (req, res) => {
+app.post("/api/staff", async (req, res) => {
   const { name, phone } = req.body;
-
-  // 1. Kiểm tra SĐT
-  const result_check = await getCustomerByPhone(phone);
-  if (result_check.length > 0) {
-    // Nếu trùng, xóa file tạm vừa upload để tránh rác server
-    if (req.file) fs.unlinkSync(req.file.path);
-    return res.json({ success: false, message: "SĐT đã tồn tại" });
-  }
-
-  // 2. Insert vào bảng guest để lấy ID
-  // Lưu ý: Lúc này cột image ta để trống hoặc null trước
   const query = `
-    INSERT INTO guest (name, phone)
+    INSERT INTO receptionist (name, phone)
     VALUES ($1, $2)
     RETURNING id
   `;
-  const result = await db.query(query, [name, phone]);
-  const newID = result.rows[0].id;
-  const newFileName = `${newID}.png`; // Tên file bạn muốn: id.png
-
-  // 3. Đổi tên file vật lý từ "temp_..." sang "ID.png"
-  if (req.file) {
-    const oldPath = req.file.path;
-    const newPath = path.join("uploads/", newFileName);
-
-    fs.renameSync(oldPath, newPath); // Đổi tên file trên ổ cứng
-
-    // 4. Cập nhật lại tên file chuẩn vào Database
-    await db.query("UPDATE guest SET image = $1 WHERE id = $2", [newFileName, newID]);
-  }
-
-  // 5. Tạo account như cũ
-  const query_account = `
-    INSERT INTO account (phone, password, role, ID_Guest)
-    VALUES ($1, $2, $3, $4)
-  `;
-  await db.query(query_account, [phone, "123455", "user", newID]);
-
-  res.json({ success: true, id: newID });
+  await db.query(query, [name, phone]);
+  res.json({ success: true });
+});
+//API Sửa Nhân Viên
+app.put("/api/staff/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, phone } = req.body;
+  const query = `
+UPDATE receptionist
+SET 
+    name = $1,
+    phone = $2
+WHERE id = $3
+`;
+  const values = [name, phone, id];
+  await db.query(query, values);
+  res.json({ message: "Đã sửa nhân viên" });
 });
 // API XÓA Nhân Viên
+app.delete("/api/staff/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  await db.query("DELETE FROM receptionist WHERE id = $1", [id]);
+  res.json({ message: "Đã xóa khách hàng" });
+});
 
 //API PT
 // API Lấy danh sách PT

@@ -8,12 +8,12 @@
   <body>
     <h1>Danh sách nhân viên</h1>
 
-    <a href="/new-customer">Thêm nhân viên</a>
+    <a href="/admin/staff/create">Thêm nhân viên</a>
     <ul id="list"></ul>
 
     <script>
       async function loadCustomers() {
-        const res = await fetch("/api/Staffs");
+        const res = await fetch("/api/staff");
 
         const data = await res.json();
 
@@ -26,7 +26,7 @@
 
           li.innerHTML = `
 ${c.id} - ${c.name}
-<a href="/edit-staff?id=${c.id}">Sửa</a>
+<a href="/admin/staff/edit?id=${c.id}">Sửa</a>
 `;
 
           list.appendChild(li);
