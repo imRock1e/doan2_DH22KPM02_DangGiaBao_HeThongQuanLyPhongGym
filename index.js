@@ -6,6 +6,7 @@ import session from "express-session";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 ////////DB
 const db = new pg.Client({
   user: "postgres",
@@ -38,7 +39,7 @@ app.use("/uploads", express.static("uploads"));
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    cb(null, Date.now() + ".png");
+    cb(null, "temp_" + Date.now() + ".png"); // Tên tạm để tránh trùng lặp lúc đang xử lý
   },
 });
 const upload = multer({ storage });
@@ -164,61 +165,57 @@ app.get("/api/customers", async (req, res) => {
   res.json(customers);
 });
 
-app.post("/api/customers", upload.single("image"), async (req, res) => {
-  const { name, phone } = req.body;
-
-  //kiểm tra đã có user qua số điện thoại chưa
-  const result_check = await getCustomerByPhone(phone);
-  if (result_check.length > 0) {
-    return res.json({ success: false });
-  }
-
-  const query = `
-  INSERT INTO guest (name, phone, image)
-  VALUES ($1, $2, $3)
-  RETURNING *
-`;
-  const values = [name, phone, req.file ? req.file.filename : null];
-  const result = await db.query(query, values);
-  const newID = result.rows[0].id;
-
-  const query_account = `
-  INSERT INTO account (phone, password, role, ID_Guest)
-  VALUES ($1, $2, $3, $4)
-`;
-  const values_account = [phone, "123455", "user", newID];
-  await db.query(query_account, values_account);
-  res.json(result);
-});
-
 app.get("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+
   const customer = await getCustomerByID(id);
+
   if (!customer) return res.status(404).json({ message: "Not found" });
+
   res.json(customer[0]);
 });
 
-app.put("/api/customers/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  const customer = await getCustomerByID(id);
-  if (!customer[0]) return res.status(404).json({ message: "Not found" });
-  const { name, phone, start_date, end_date, status, note } = req.body;
-  console.log(name, phone, start_date, end_date, status, note);
+app.post("/api/customers", upload.single("image"), async (req, res) => {
+  const { name, phone } = req.body;
+
+  // 1. Kiểm tra SĐT
+  const result_check = await getCustomerByPhone(phone);
+  if (result_check.length > 0) {
+    // Nếu trùng, xóa file tạm vừa upload để tránh rác server
+    if (req.file) fs.unlinkSync(req.file.path);
+    return res.json({ success: false, message: "SĐT đã tồn tại" });
+  }
+
+  // 2. Insert vào bảng guest để lấy ID
+  // Lưu ý: Lúc này cột image ta để trống hoặc null trước
   const query = `
-UPDATE guest
-SET 
-    name = $1,
-    phone = $2,
-    start_date = $3,
-    end_date = $4,
-    status = $5,
-    note = $6
-WHERE id = $7
-RETURNING *;
-`;
-  const values = [name, phone, start_date, end_date, status, note, id];
-  const result = await db.query(query, values);
-  res.json(result);
+    INSERT INTO guest (name, phone)
+    VALUES ($1, $2)
+    RETURNING id
+  `;
+  const result = await db.query(query, [name, phone]);
+  const newID = result.rows[0].id;
+  const newFileName = `${newID}.png`; // Tên file bạn muốn: id.png
+
+  // 3. Đổi tên file vật lý từ "temp_..." sang "ID.png"
+  if (req.file) {
+    const oldPath = req.file.path;
+    const newPath = path.join("uploads/", newFileName);
+
+    fs.renameSync(oldPath, newPath); // Đổi tên file trên ổ cứng
+
+    // 4. Cập nhật lại tên file chuẩn vào Database
+    await db.query("UPDATE guest SET image = $1 WHERE id = $2", [newFileName, newID]);
+  }
+
+  // 5. Tạo account như cũ
+  const query_account = `
+    INSERT INTO account (phone, password, role, ID_Guest)
+    VALUES ($1, $2, $3, $4)
+  `;
+  await db.query(query_account, [phone, "123455", "user", newID]);
+
+  res.json({ success: true, id: newID });
 });
 
 app.delete("/api/customers/:id", async (req, res) => {
@@ -230,6 +227,14 @@ RETURNING *;
 `;
   const values = [id];
   const result = await db.query(query, values);
+
+  const query_account = `
+DELETE FROM account
+WHERE id_guest = $1
+RETURNING *;
+`;
+  const values_account = [id];
+  const result_account = await db.query(query_account, values_account);
   res.json({ message: "Deleted" });
 });
 
