@@ -55,7 +55,6 @@ async function getUsers() {
     console.log("co loi getUsers");
   }
 }
-
 // Kiểm tra tài khoản qua SĐT
 async function getUserByPhone(phone) {
   try {
@@ -78,7 +77,6 @@ async function getCustomer() {
     console.log("co loi getCustomer");
   }
 }
-
 // Kiểm tra khách hàng qua ID
 async function getCustomerByID(id) {
   try {
@@ -90,7 +88,6 @@ async function getCustomerByID(id) {
     console.log("co loi getCustomerByID");
   }
 }
-
 // Kiểm tra khách hàng qua SĐT
 async function getCustomerByPhone(phone) {
   try {
@@ -100,6 +97,17 @@ async function getCustomerByPhone(phone) {
   } catch (error) {
     console.log(error);
     console.log("co loi getCustomerByPhone");
+  }
+}
+
+// Lấy toàn bộ nhân viên
+async function getStaff() {
+  try {
+    const result = await db.query("SELECT * FROM receptionist ORDER BY id ASC");
+    let staffs = result.rows;
+    return staffs;
+  } catch (error) {
+    console.log("co loi getStaff");
   }
 }
 
@@ -118,14 +126,25 @@ app.get("/admin-index", (req, res) => {
 });
 
 //CUSTOMER
-app.get("/admin-customer", (req, res) => {
+app.get("/admin/customer", (req, res) => {
   res.render("admin-customer.ejs");
 });
-app.get("/new-customer", (req, res) => {
+app.get("/admin/customer/create", (req, res) => {
   res.render("admin-customer-create.ejs");
 });
-app.get("/edit-customer", (req, res) => {
+app.get("/admin/customer/edit", (req, res) => {
   res.render("admin-customer-edit.ejs");
+});
+
+//STAFF
+app.get("/admin/staff", (req, res) => {
+  res.render("admin-staff.ejs");
+});
+app.get("/admin/staff/create", (req, res) => {
+  res.render("admin-staff-create.ejs");
+});
+app.get("/admin/staff/edit", (req, res) => {
+  res.render("admin-staff-edit.ejs");
 });
 
 // 6. HỆ THỐNG API CHÍNH
@@ -248,8 +267,54 @@ app.delete("/api/customers/:id", async (req, res) => {
 
 //API Nhân Viên
 // API Lấy danh sách Nhân Viên
+app.get("/api/staffs", async (req, res) => {
+  const staffs = await getStaffs();
+  res.json(staffs);
+});
 // API Lấy cụ thể Nhân Viên
 // API Thêm mới Nhân Viên
+app.post("/api/customers", upload.single("image"), async (req, res) => {
+  const { name, phone } = req.body;
+
+  // 1. Kiểm tra SĐT
+  const result_check = await getCustomerByPhone(phone);
+  if (result_check.length > 0) {
+    // Nếu trùng, xóa file tạm vừa upload để tránh rác server
+    if (req.file) fs.unlinkSync(req.file.path);
+    return res.json({ success: false, message: "SĐT đã tồn tại" });
+  }
+
+  // 2. Insert vào bảng guest để lấy ID
+  // Lưu ý: Lúc này cột image ta để trống hoặc null trước
+  const query = `
+    INSERT INTO guest (name, phone)
+    VALUES ($1, $2)
+    RETURNING id
+  `;
+  const result = await db.query(query, [name, phone]);
+  const newID = result.rows[0].id;
+  const newFileName = `${newID}.png`; // Tên file bạn muốn: id.png
+
+  // 3. Đổi tên file vật lý từ "temp_..." sang "ID.png"
+  if (req.file) {
+    const oldPath = req.file.path;
+    const newPath = path.join("uploads/", newFileName);
+
+    fs.renameSync(oldPath, newPath); // Đổi tên file trên ổ cứng
+
+    // 4. Cập nhật lại tên file chuẩn vào Database
+    await db.query("UPDATE guest SET image = $1 WHERE id = $2", [newFileName, newID]);
+  }
+
+  // 5. Tạo account như cũ
+  const query_account = `
+    INSERT INTO account (phone, password, role, ID_Guest)
+    VALUES ($1, $2, $3, $4)
+  `;
+  await db.query(query_account, [phone, "123455", "user", newID]);
+
+  res.json({ success: true, id: newID });
+});
 // API XÓA Nhân Viên
 
 //API PT

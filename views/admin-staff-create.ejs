@@ -6,7 +6,7 @@
     <title>Document</title>
   </head>
   <body>
-    <h1>Thêm khách</h1>
+    <h1>Thêm nhân viên</h1>
 
     <form id="form">
       Tên<br />
@@ -15,29 +15,8 @@
       SĐT<br />
       <input name="phone" /><br /><br />
 
-      <video id="video" width="300" autoplay></video><br />
-      <button type="button" onclick="capture()">Chụp</button><br /><br />
-
-      <canvas id="canvas" width="300" height="200"></canvas><br />
-
-      <button>Save</button>
-    </form>
-
     <script>
-      const video = document.getElementById("video");
-
-      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-        video.srcObject = stream;
-      });
-
-      function capture() {
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-
-        ctx.drawImage(video, 0, 0, 300, 200);
-      }
-
-      document.getElementById("form").onsubmit = async (e) => {
+       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
 
         const canvas = document.getElementById("canvas");
@@ -50,12 +29,12 @@
 
           if (blob) formData.append("image", blob, "photo.png");
 
-          await fetch("/api/customers", {
+          await fetch("/api/staffs", {
             method: "POST",
             body: formData,
           });
 
-          location.href = "/admin/customer";
+          location.href = "/admin/staff";
         });
       };
     </script>
