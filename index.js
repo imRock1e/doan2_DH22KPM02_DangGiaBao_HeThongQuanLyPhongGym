@@ -122,10 +122,10 @@ app.get("/admin-customer", (req, res) => {
   res.render("admin-customer.ejs");
 });
 app.get("/new-customer", (req, res) => {
-  res.render("admin-create-customer.ejs");
+  res.render("admin-customer-create.ejs");
 });
 app.get("/edit-customer", (req, res) => {
-  res.render("admin-edit-customer.ejs");
+  res.render("admin-customer-edit.ejs");
 });
 
 // 6. HỆ THỐNG API CHÍNH
@@ -164,12 +164,12 @@ app.get("/me", (req, res) => {
   });
 });
 
+// API Khách Hàng
 // API Lấy danh sách khách hàng
 app.get("/api/customers", async (req, res) => {
   const customers = await getCustomer();
   res.json(customers);
 });
-
 // API Lấy cụ thể khách hàng
 app.get("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
@@ -180,7 +180,6 @@ app.get("/api/customers/:id", async (req, res) => {
 
   res.json(customer[0]);
 });
-
 // API Thêm mới khách hàng
 app.post("/api/customers", upload.single("image"), async (req, res) => {
   const { name, phone } = req.body;
@@ -224,8 +223,7 @@ app.post("/api/customers", upload.single("image"), async (req, res) => {
 
   res.json({ success: true, id: newID });
 });
-
-// API XÓA KHÁCH HÀNG
+// API Xóa Khách Hàng
 app.delete("/api/customers/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
@@ -241,6 +239,25 @@ app.delete("/api/customers/:id", async (req, res) => {
   await db.query("DELETE FROM guest WHERE id = $1", [id]);
   res.json({ message: "Đã xóa khách hàng và ảnh liên quan" });
 });
+
+//API Gói Tập
+// API Lấy danh sách Gói Tập
+// API Lấy cụ thể Gói Tập
+// API Thêm mới Gói Tập
+// API XÓA Gói Tập
+
+//API Nhân Viên
+// API Lấy danh sách Nhân Viên
+// API Lấy cụ thể Nhân Viên
+// API Thêm mới Nhân Viên
+// API XÓA Nhân Viên
+
+//API PT
+// API Lấy danh sách PT
+// API Lấy cụ thể PT
+// API Thêm mới PT
+// API XÓA PT
+
 ////////LISTEN
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
