@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Sửa Gói Tập</h1>
+
+    <form id="form">
+      ID<br />
+      <input id="id" name="id" readonly /><br />
+
+      Tên gói<br />
+      <input id="name" name="name" /><br />
+
+      Thời Gian<br />
+      <input
+        type="number"
+        min="1"
+        step="1"
+        onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+        id="duration"
+        name="duration"
+      /><br /><br />
+
+      Giá tiền<br />
+      <input id="price" name="price" /><br /><br />
+      <button>Save</button>
+      <button type="button" onclick="deleteCustomer()">DELETE</button>
+    </form>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+
+      const id = params.get("id");
+
+      async function load() {
+        const res = await fetch("/api/package/" + id);
+
+        const p = await res.json();
+
+        document.getElementById("id").value = p.id;
+        document.getElementById("name").value = p.name;
+        document.getElementById("duration").value = p.duration_month;
+        document.getElementById("price").value = p.price;
+      }
+
+      load();
+
+      const nameInput = document.getElementById("name");
+      const durationInput = document.getElementById("duration");
+      const priceInput = document.getElementById("price");
+
+      priceInput.addEventListener("input", function (e) {
+        // Lấy giá trị và xóa các ký tự không phải số
+        let priceInput = e.target.value.replace(/\D/g, "");
+
+        // Định dạng số có dấu chấm phân cách
+        e.target.value = new Intl.NumberFormat("vi-VN").format(priceInput);
+      });
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+        const cleanPrice = Number(priceInput.value.replace(/\./g, ""));
+        await fetch("/api/package/" + id, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: nameInput.value,
+            duration: duration.value,
+            price: cleanPrice,
+          }),
+        });
+
+        location.href = "/admin/package/edit?id=" + id;
+      };
+
+      async function deleteCustomer() {
+        await fetch("/api/package/" + id, {
+          method: "DELETE",
+        });
+
+        location.href = "/admin/package";
+      }
+    </script>
+  </body>
+</html>

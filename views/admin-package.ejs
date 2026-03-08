@@ -6,14 +6,14 @@
     <title>Document</title>
   </head>
   <body>
-    <h1>Danh sách nhân viên</h1>
+    <h1>Danh sách gói tập</h1>
 
-    <a href="/admin/staff/create">Thêm nhân viên</a>
+    <a href="/admin/package/create">Thêm gói tập</a>
     <ul id="list"></ul>
 
     <script>
       async function loadCustomers() {
-        const res = await fetch("/api/staff");
+        const res = await fetch("/api/package");
 
         const data = await res.json();
 
@@ -21,12 +21,12 @@
 
         list.innerHTML = "";
 
-        data.forEach((s) => {
+        data.forEach((p) => {
           const li = document.createElement("li");
 
           li.innerHTML = `
-${s.id} - ${s.name}
-<a href="/admin/staff/edit?id=${s.id}">Sửa</a>
+${p.id} - ${p.name}
+<a href="/admin/package/edit?id=${p.id}">Sửa</a>
 `;
 
           list.appendChild(li);

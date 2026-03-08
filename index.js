@@ -55,7 +55,7 @@ async function getUsers() {
     console.log("co loi getUsers");
   }
 }
-// Kiểm tra tài khoản qua SĐT
+// Lấy tra tài khoản qua SĐT
 async function getUserByPhone(phone) {
   try {
     const result = await db.query("SELECT * FROM account WHERE phone = $1", [phone]);
@@ -77,7 +77,7 @@ async function getCustomer() {
     console.log("co loi getCustomer");
   }
 }
-// Kiểm tra khách hàng qua ID
+// Lấy tra khách hàng qua ID
 async function getCustomerByID(id) {
   try {
     const result = await db.query("SELECT * FROM guest WHERE id = $1", [id]);
@@ -88,7 +88,7 @@ async function getCustomerByID(id) {
     console.log("co loi getCustomerByID");
   }
 }
-// Kiểm tra khách hàng qua SĐT
+// Lấy tra khách hàng qua SĐT
 async function getCustomerByPhone(phone) {
   try {
     const result = await db.query("SELECT * FROM guest WHERE phone = $1", [phone]);
@@ -110,7 +110,7 @@ async function getStaff() {
     console.log("co loi getStaff");
   }
 }
-// Kiểm tra khách hàng qua ID
+// Lấy tra khách hàng qua ID
 async function getStaffByID(id) {
   try {
     const result = await db.query("SELECT * FROM receptionist WHERE id = $1", [id]);
@@ -119,6 +119,28 @@ async function getStaffByID(id) {
   } catch (error) {
     console.log(error);
     console.log("co loi getStaffByID");
+  }
+}
+
+// Lấy toàn bộ gói tập
+async function getPackage() {
+  try {
+    const result = await db.query("SELECT * FROM package ORDER BY id ASC");
+    let packages = result.rows;
+    return packages;
+  } catch (error) {
+    console.log("co loi getPackage");
+  }
+}
+// Lấy gói tập qua ID
+async function getPackageByID(id) {
+  try {
+    const result = await db.query("SELECT * FROM package WHERE id = $1", [id]);
+    let packages = result.rows;
+    return packages;
+  } catch (error) {
+    console.log(error);
+    console.log("co loi getPackageByID");
   }
 }
 
@@ -156,6 +178,17 @@ app.get("/admin/staff/create", (req, res) => {
 });
 app.get("/admin/staff/edit", (req, res) => {
   res.render("admin-staff-edit.ejs");
+});
+
+//PACKAGE
+app.get("/admin/package", (req, res) => {
+  res.render("admin-package.ejs");
+});
+app.get("/admin/package/create", (req, res) => {
+  res.render("admin-package-create.ejs");
+});
+app.get("/admin/package/edit", (req, res) => {
+  res.render("admin-package-edit.ejs");
 });
 
 // 6. HỆ THỐNG API CHÍNH
@@ -288,9 +321,52 @@ app.delete("/api/customer/:id", async (req, res) => {
 
 //API Gói Tập
 // API Lấy danh sách Gói Tập
+app.get("/api/package", async (req, res) => {
+  const packages = await getPackage();
+  res.json(packages);
+});
 // API Lấy cụ thể Gói Tập
+app.get("/api/package/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const packages = await getPackageByID(id);
+  console.log(packages);
+  if (!packages) return res.status(404).json({ message: "Not found" });
+  res.json(packages[0]);
+});
 // API Thêm mới Gói Tập
+app.post("/api/package", async (req, res) => {
+  const { name, duration, price } = req.body;
+  console.log(name, duration, price);
+  const query = `
+    INSERT INTO package (name, duration_month, price)
+    VALUES ($1, $2, $3)
+    RETURNING id
+  `;
+  await db.query(query, [name, duration, price]);
+  res.json({ success: true });
+});
+// API Sửa Gói Tập
+app.put("/api/package/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, duration, price } = req.body;
+  const query = `
+UPDATE package
+SET 
+    name = $1,
+    duration_month = $2,
+    price = $3
+WHERE id = $4
+`;
+  const values = [name, duration, price, id];
+  await db.query(query, values);
+  res.json({ message: "Đã sửa gói tập" });
+});
 // API XÓA Gói Tập
+app.delete("/api/package/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  await db.query("DELETE FROM package WHERE id = $1", [id]);
+  res.json({ message: "Đã xóa gói tập" });
+});
 
 //API Nhân Viên
 // API Lấy danh sách Nhân Viên

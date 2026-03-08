@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Thêm gói tập</h1>
+
+    <form id="form">
+      Tên gói<br />
+      <input id="name" name="name" /><br />
+
+      Thời Gian<br />
+      <input
+        type="number"
+        min="1"
+        step="1"
+        onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+        id="duration"
+        name="duration"
+      /><br /><br />
+
+      Giá tiền<br />
+      <input id="price" name="price" /><br /><br />
+      <button>Save</button>
+    </form>
+    <script>
+      const nameInput = document.getElementById("name");
+      const durationInput = document.getElementById("duration");
+      const priceInput = document.getElementById("price");
+
+      priceInput.addEventListener("input", function (e) {
+        // Lấy giá trị và xóa các ký tự không phải số
+        let priceInput = e.target.value.replace(/\D/g, "");
+
+        // Định dạng số có dấu chấm phân cách
+        e.target.value = new Intl.NumberFormat("vi-VN").format(priceInput);
+      });
+
+      document.getElementById("form").onsubmit = async (e) => {
+        e.preventDefault();
+        const cleanPrice = Number(priceInput.value.replace(/\./g, ""));
+        await fetch("/api/package", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: nameInput.value,
+            duration: duration.value,
+            price: cleanPrice,
+          }),
+        });
+        location.href = "/admin/package";
+      };
+    </script>
+  </body>
+</html>
