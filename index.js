@@ -286,19 +286,18 @@ app.post("/api/customer", upload.single("image"), async (req, res) => {
 //API Sửa khách hàng
 app.put("/api/customer/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, phone, start_date, end_date, status, note } = req.body;
+  const { name, phone, end_date, status, note } = req.body;
   const query = `
 UPDATE guest
 SET 
     name = $1,
     phone = $2,
-    start_date = $3,
-    end_date = $4,
-    status = $5,
-    note = $6
-WHERE id = $7
+    end_date = $3,
+    status = $4,
+    note = $5
+WHERE id = $6
 `;
-  const values = [name, phone, start_date, end_date, status, note, id];
+  const values = [name, phone, end_date, status, note, id];
   await db.query(query, values);
   res.json({ message: "Đã sửa khách hàng" });
 });
