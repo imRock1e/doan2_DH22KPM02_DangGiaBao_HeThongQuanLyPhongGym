@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
   </head>
   <body>
     <h1>Thêm khách</h1>
@@ -24,6 +25,11 @@
     </form>
 
     <script>
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+        faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+        faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+      ]);
       const video = document.getElementById("video");
 
       navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
