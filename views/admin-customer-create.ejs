@@ -36,11 +36,19 @@
         video.srcObject = stream;
       });
 
-      function capture() {
+      let faceVector = null;
+
+      async function capture() {
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-
         ctx.drawImage(video, 0, 0, 300, 200);
+        const detection = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        if (!detection) {
+          alert("Không nhận diện được khuôn mặt");
+          return;
+        }
+        faceVector = Array.from(detection.descriptor);
+        console.log("Face vector:", faceVector);
       }
 
       document.getElementById("form").onsubmit = async (e) => {
@@ -53,6 +61,7 @@
 
           formData.append("name", e.target.name.value);
           formData.append("phone", e.target.phone.value);
+          formData.append("face", JSON.stringify(faceVector));
 
           if (blob) formData.append("image", blob, "photo.png");
 

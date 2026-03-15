@@ -248,7 +248,7 @@ app.get("/api/customer/:id", async (req, res) => {
 // API Thêm mới khách hàng
 app.post("/api/customer", upload.single("image"), async (req, res) => {
   const { name, phone } = req.body;
-
+  const face = JSON.parse(req.body.face);
   // 1. Kiểm tra SĐT
   const result_check = await getCustomerByPhone(phone);
   if (result_check.length > 0) {

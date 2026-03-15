@@ -6,7 +6,7 @@ CREATE TABLE guest (
     name VARCHAR(100),
     phone VARCHAR(20),
     image TEXT,
-    start_date DATE,
+    face_embedding FLOAT8[],    
     end_date DATE,
     status VARCHAR(20),
     note TEXT
