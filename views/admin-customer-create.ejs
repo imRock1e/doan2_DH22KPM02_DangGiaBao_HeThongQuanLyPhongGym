@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
   </head>
   <body>
     <h1>Thêm khách</h1>
@@ -16,47 +16,92 @@
       SĐT<br />
       <input name="phone" /><br /><br />
 
-      <video id="video" width="300" autoplay></video><br />
+      <video id="video" width="400" autoplay></video><br />
       <button type="button" onclick="capture()">Chụp</button><br /><br />
 
-      <canvas id="canvas" width="300" height="200"></canvas><br />
+      <canvas id="canvas" width="400" height="300"></canvas><br />
 
       <button>Save</button>
     </form>
 
     <script>
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
-        faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
-        faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
-      ]);
-      const video = document.getElementById("video");
+      let modelsLoaded = false;
+      let faceVector = null;
+      let video;
+
+      window.onload = async () => {
+        video = document.getElementById("video");
+
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          video.srcObject = stream;
+        });
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+          faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+          faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+        ]);
+
+        console.log("Models loaded");
+        modelsLoaded = true;
+      };
 
       navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
       });
 
-      let faceVector = null;
-
       async function capture() {
+        if (!modelsLoaded) {
+          alert("AI đang load, đợi chút...");
+          return;
+        }
+
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, 300, 200);
-        const detection = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-        if (!detection) {
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, 400, 300);
+
+        const result = await faceapi
+          .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 416 }))
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        console.log(result); // debug
+
+        if (result === undefined || result === null) {
           alert("Không nhận diện được khuôn mặt");
           return;
         }
-        faceVector = Array.from(detection.descriptor);
+
+        faceVector = Array.from(result.descriptor);
+
+        const box = result.detection.box;
+
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
+
         console.log("Face vector:", faceVector);
       }
 
       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
-
+        if (!faceVector) {
+          alert("Hãy chụp khuôn mặt trước");
+          return;
+        }
         const canvas = document.getElementById("canvas");
 
-        canvas.toBlob(async (blob) => {
+        const tempCanvas = document.createElement("canvas");
+        const tempCtx = tempCanvas.getContext("2d");
+
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+
+        tempCtx.drawImage(video, 0, 0);
+
+        tempCanvas.toBlob(async (blob) => {
           const formData = new FormData();
 
           formData.append("name", e.target.name.value);

@@ -184,7 +184,10 @@ app.get("/admin/staff/edit", (req, res) => {
 app.get("/admin/checkout", (req, res) => {
   res.render("admin-checkout.ejs");
 });
-
+//CHECKIN
+app.get("/admin/checkin", (req, res) => {
+  res.render("admin-checkin.ejs");
+});
 //PACKAGE
 app.get("/admin/package", (req, res) => {
   res.render("admin-package.ejs");
@@ -249,6 +252,7 @@ app.get("/api/customer/:id", async (req, res) => {
 app.post("/api/customer", upload.single("image"), async (req, res) => {
   const { name, phone } = req.body;
   const face = JSON.parse(req.body.face);
+  console.log(face);
   // 1. Kiểm tra SĐT
   const result_check = await getCustomerByPhone(phone);
   if (result_check.length > 0) {
@@ -260,11 +264,11 @@ app.post("/api/customer", upload.single("image"), async (req, res) => {
   // 2. Insert vào bảng guest để lấy ID
   // Lưu ý: Lúc này cột image ta để trống hoặc null trước
   const query = `
-    INSERT INTO guest (name, phone)
-    VALUES ($1, $2)
+    INSERT INTO guest (name, phone,face_embedding)
+    VALUES ($1, $2, $3)
     RETURNING id
   `;
-  const result = await db.query(query, [name, phone]);
+  const result = await db.query(query, [name, phone, face]);
   const newID = result.rows[0].id;
   const newFileName = `${newID}.png`; // Tên file bạn muốn: id.png
 
@@ -426,7 +430,7 @@ app.post("/api/bill", async (req, res) => {
   const pkg = await db.query(`SELECT price FROM package WHERE id=$1`, [id_package]);
 
   const original_price = pkg.rows[0].price;
-  const final_price = original_price - discount;
+  const final_price = original_price - (original_price * discount) / 100;
 
   const result = await db.query(
     `INSERT INTO bill
@@ -457,6 +461,40 @@ app.get("/api/customer", async (req, res) => {
   const result = await db.query(query, values);
 
   res.json(result.rows);
+});
+
+//API CHECKIN
+//Checkin
+app.post("/api/checkin", async (req, res) => {
+  const face = req.body.face;
+
+  const customers = await db.query("select id,name,face_embedding from guest where face_embedding is not null");
+
+  let bestMatch = null;
+  let minDistance = 999;
+
+  for (const c of customers.rows) {
+    const dbFace = c.face_embedding;
+
+    let sum = 0;
+
+    for (let i = 0; i < 128; i++) {
+      sum += Math.pow(face[i] - dbFace[i], 2);
+    }
+
+    const distance = Math.sqrt(sum);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      bestMatch = c;
+    }
+  }
+
+  if (minDistance < 0.5) {
+    res.json({ customer: bestMatch });
+  } else {
+    res.json({ customer: null });
+  }
 });
 
 //API PT
