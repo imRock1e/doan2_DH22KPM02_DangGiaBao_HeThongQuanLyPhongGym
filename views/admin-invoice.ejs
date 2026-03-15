@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Danh sách hóa đơn</title>
+  </head>
+
+  <body>
+    <h1>Danh sách hóa đơn</h1>
+    Từ ngày
+    <input type="date" id="from" />
+
+    Đến ngày
+    <input type="date" id="to" />
+
+    <button onclick="bill_filter()">Lọc</button>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Khách</th>
+          <th>Lễ tân</th>
+          <th>Gói</th>
+          <th>Giá gốc</th>
+          <th>Discount</th>
+          <th>Giá cuối</th>
+          <th>Ngày</th>
+          <th>Xem</th>
+        </tr>
+      </thead>
+
+      <tbody id="billTable"></tbody>
+    </table>
+
+    <script>
+      async function loadBills() {
+        const res = await fetch("/api/bills");
+        const bills = await res.json();
+
+        const table = document.getElementById("billTable");
+
+        table.innerHTML = "";
+
+        bills.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+<td>${b.id}</td>
+<td>${b.guest_name}</td>
+<td>${b.receptionist_name}</td>
+<td>${b.package_name}</td>
+<td>${b.original_price}</td>
+<td>${b.discount}%</td>
+<td>${b.final_price}</td>
+<td>${b.created_at.split("T")[0]}</td>
+<td><a href="/admin/bill/view?id=${b.id}">Xem</a></td>
+`;
+
+          table.appendChild(tr);
+        });
+      }
+
+      loadBills();
+      async function bill_filter() {
+        const from = document.getElementById("from").value;
+        const to = document.getElementById("to").value;
+        let url = "/api/bills?";
+        if (from) url += "from=" + from + "&";
+        if (to) url += "to=" + to;
+        const res = await fetch(url);
+        const bills = await res.json();
+        const table = document.getElementById("billTable");
+        table.innerHTML = "";
+        bills.forEach((b) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+<td>${b.id}</td>
+<td>${b.guest_name}</td>
+<td>${b.receptionist_name}</td>
+<td>${b.package_name}</td>
+<td>${b.original_price}</td>
+<td>${b.discount}%</td>
+<td>${b.final_price}</td>
+<td>${b.created_at.split("T")[0]}</td>
+<td><a href="/admin/bill/view?id=${b.id}">Xem</a></td>
+`;
+
+          table.appendChild(tr);
+        });
+      }
+    </script>
+  </body>
+</html>

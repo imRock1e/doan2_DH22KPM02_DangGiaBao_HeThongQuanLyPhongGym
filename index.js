@@ -181,13 +181,18 @@ app.get("/admin/staff/edit", (req, res) => {
 });
 
 //CHECKOUT
-app.get("/admin/checkout", (req, res) => {
-  res.render("admin-checkout.ejs");
+app.get("/admin/invoice", (req, res) => {
+  res.render("admin-invoice.ejs");
 });
+app.get("/admin/invoice/create", (req, res) => {
+  res.render("admin-invoice-create.ejs");
+});
+
 //CHECKIN
 app.get("/admin/checkin", (req, res) => {
   res.render("admin-checkin.ejs");
 });
+
 //PACKAGE
 app.get("/admin/package", (req, res) => {
   res.render("admin-package.ejs");
@@ -247,6 +252,29 @@ app.get("/api/customer/:id", async (req, res) => {
   const customer = await getCustomerByID(id);
   if (!customer) return res.status(404).json({ message: "Not found" });
   res.json(customer[0]);
+});
+//API Lấy cụ thể hóa đơn theo khách hàng
+app.get("/api/customer/:id/bills", async (req, res) => {
+  const id = req.params.id;
+
+  const result = await db.query(
+    `
+    SELECT 
+      bill.id,
+      package.name as package_name,
+      bill.original_price,
+      bill.discount,
+      bill.final_price,
+      bill.created_at
+    FROM bill
+    JOIN package ON bill.id_package = package.id
+    WHERE bill.id_guest = $1
+    ORDER BY bill.created_at DESC
+  `,
+    [id]
+  );
+
+  res.json(result.rows);
 });
 // API Thêm mới khách hàng
 app.post("/api/customer", upload.single("image"), async (req, res) => {
@@ -423,44 +451,112 @@ app.delete("/api/staff/:id", async (req, res) => {
 });
 
 //API Hoá Đơn
+// API Lấy danh sách Hoá Đơn
+app.get("/api/bills", async (req, res) => {
+  const result = await db.query(`
+    SELECT
+    bill.id,
+    guest.name AS guest_name,
+    receptionist.name AS receptionist_name,
+    package.name AS package_name,
+    bill.original_price,
+    bill.discount,
+    bill.final_price,
+    bill.created_at
+FROM bill
+LEFT JOIN guest ON bill.id_guest = guest.id
+LEFT JOIN receptionist ON bill.id_receptionist = receptionist.id
+LEFT JOIN package ON bill.id_package = package.id
+ORDER BY bill.created_at DESC;
+  `);
+
+  res.json(result.rows);
+});
+// API Lấy hóa đơn theo ngày
+app.get("/api/bill-filter", async (req, res) => {
+  const { from, to } = req.query;
+
+  let sql = `
+      SELECT
+    bill.id,
+    guest.name AS guest_name,
+    receptionist.name AS receptionist_name,
+    package.name AS package_name,
+    bill.original_price,
+    bill.discount,
+    bill.final_price,
+    bill.created_at
+FROM bill
+LEFT JOIN guest ON bill.id_guest = guest.id
+LEFT JOIN receptionist ON bill.id_receptionist = receptionist.id
+LEFT JOIN package ON bill.id_package = package.id
+ORDER BY bill.created_at DESC;
+      WHERE 1=1
+    `;
+  const params = [];
+  let i = 1;
+  if (from) {
+    sql += ` AND bill.created_at >= $${i}`;
+    params.push(from);
+    i++;
+  }
+  if (to) {
+    sql += ` AND bill.created_at <= $${i}`;
+    params.push(to + " 23:59:59");
+    i++;
+  }
+  sql += ` ORDER BY bill.created_at DESC`;
+  const result = await db.query(sql, params);
+  res.json(result.rows);
+});
+
 // API Tạo Hóa Đơn
 app.post("/api/bill", async (req, res) => {
   const { id_guest, id_receptionist, id_package, discount } = req.body;
 
-  const pkg = await db.query(`SELECT price FROM package WHERE id=$1`, [id_package]);
+  // Lấy price + duration_month của package
+  const pkg = await db.query(`SELECT price, duration_month FROM package WHERE id=$1`, [id_package]);
 
   const original_price = pkg.rows[0].price;
+  const duration = pkg.rows[0].duration_month;
+
   const final_price = original_price - (original_price * discount) / 100;
 
+  // Tạo bill
   const result = await db.query(
     `INSERT INTO bill
     (id_guest,id_receptionist,id_package,original_price,discount,final_price)
     VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING id`,
+    RETURNING id, created_at`,
     [id_guest, id_receptionist, id_package, original_price, discount, final_price]
   );
 
-  res.json({ id: result.rows[0].id });
-});
-// API lấy khách hàng realtime
-app.get("/api/customer", async (req, res) => {
-  const search = req.query.search || "";
+  const created_at = result.rows[0].created_at;
 
-  const query = `
-    SELECT id, name, phone
-    FROM guest
-    WHERE
-      name ILIKE $1
-      OR phone ILIKE $1
-    ORDER BY name
-    LIMIT 10
-  `;
+  // Lấy end_date hiện tại của khách
+  const guest = await db.query(`SELECT end_date FROM guest WHERE id=$1`, [id_guest]);
 
-  const values = [`%${search}%`];
+  const end_date = guest.rows[0].end_date;
 
-  const result = await db.query(query, values);
+  let new_end_date;
 
-  res.json(result.rows);
+  if (!end_date || end_date < new Date()) {
+    // TH1 + TH2
+    new_end_date = await db.query(`SELECT ($1::date + INTERVAL '1 month' * $2) AS date`, [created_at, duration]);
+  } else {
+    // TH3
+    new_end_date = await db.query(`SELECT ($1::date + INTERVAL '1 month' * $2) AS date`, [end_date, duration]);
+  }
+
+  const final_end_date = new_end_date.rows[0].date;
+
+  // Update guest
+  await db.query(`UPDATE guest SET end_date=$1 WHERE id=$2`, [final_end_date, id_guest]);
+
+  res.json({
+    id: result.rows[0].id,
+    new_end_date: final_end_date,
+  });
 });
 
 //API CHECKIN
@@ -495,6 +591,28 @@ app.post("/api/checkin", async (req, res) => {
   } else {
     res.json({ customer: null });
   }
+});
+
+//API Realtime
+// API lấy khách hàng realtime
+app.get("/api/customer", async (req, res) => {
+  const search = req.query.search || "";
+
+  const query = `
+    SELECT id, name, phone
+    FROM guest
+    WHERE
+      name ILIKE $1
+      OR phone ILIKE $1
+    ORDER BY name
+    LIMIT 10
+  `;
+
+  const values = [`%${search}%`];
+
+  const result = await db.query(query, values);
+
+  res.json(result.rows);
 });
 
 //API PT

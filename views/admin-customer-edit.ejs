@@ -33,6 +33,23 @@
       <button type="button" onclick="deleteCustomer()">DELETE</button>
     </form>
 
+    <h2>Hóa đơn</h2>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Package</th>
+          <th>Giá gốc</th>
+          <th>Discount</th>
+          <th>Giá cuối</th>
+          <th>Ngày</th>
+        </tr>
+      </thead>
+
+      <tbody id="billTable"></tbody>
+    </table>
+
     <script>
       const params = new URLSearchParams(location.search);
 
@@ -53,7 +70,32 @@
         if (c.image) document.getElementById("image").src = "/uploads/" + c.image;
       }
 
+      async function loadBills() {
+        const res = await fetch("/api/customer/" + id + "/bills");
+        const bills = await res.json();
+
+        const table = document.getElementById("billTable");
+
+        table.innerHTML = "";
+
+        bills.forEach((b) => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${b.id}</td>
+            <td>${b.package_name}</td>
+            <td>${b.original_price}</td>
+            <td>${b.discount}%</td>
+            <td>${b.final_price}</td>
+            <td>${b.created_at.split("T")[0]}</td>
+          `;
+
+          table.appendChild(tr);
+        });
+      }
+
       load();
+      loadBills();
 
       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
