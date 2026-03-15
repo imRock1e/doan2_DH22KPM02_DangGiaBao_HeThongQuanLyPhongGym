@@ -180,6 +180,11 @@ app.get("/admin/staff/edit", (req, res) => {
   res.render("admin-staff-edit.ejs");
 });
 
+//CHECKOUT
+app.get("/admin/checkout", (req, res) => {
+  res.render("admin-checkout.ejs");
+});
+
 //PACKAGE
 app.get("/admin/package", (req, res) => {
   res.render("admin-package.ejs");
@@ -411,6 +416,47 @@ app.delete("/api/staff/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   await db.query("DELETE FROM receptionist WHERE id = $1", [id]);
   res.json({ message: "Đã xóa khách hàng" });
+});
+
+//API Hoá Đơn
+// API Tạo Hóa Đơn
+app.post("/api/bill", async (req, res) => {
+  const { id_guest, id_receptionist, id_package, discount } = req.body;
+
+  const pkg = await db.query(`SELECT price FROM package WHERE id=$1`, [id_package]);
+
+  const original_price = pkg.rows[0].price;
+  const final_price = original_price - discount;
+
+  const result = await db.query(
+    `INSERT INTO bill
+    (id_guest,id_receptionist,id_package,original_price,discount,final_price)
+    VALUES ($1,$2,$3,$4,$5,$6)
+    RETURNING id`,
+    [id_guest, id_receptionist, id_package, original_price, discount, final_price]
+  );
+
+  res.json({ id: result.rows[0].id });
+});
+// API lấy khách hàng realtime
+app.get("/api/customer", async (req, res) => {
+  const search = req.query.search || "";
+
+  const query = `
+    SELECT id, name, phone
+    FROM guest
+    WHERE
+      name ILIKE $1
+      OR phone ILIKE $1
+    ORDER BY name
+    LIMIT 10
+  `;
+
+  const values = [`%${search}%`];
+
+  const result = await db.query(query, values);
+
+  res.json(result.rows);
 });
 
 //API PT

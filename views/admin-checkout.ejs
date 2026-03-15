@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Create Bill</title>
+
+    <style>
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+        #bill {
+          width: 148mm;
+          min-height: 200mm;
+          border: none;
+          page-break-after: avoid;
+        }
+        button {
+          display: none;
+        }
+        .print-btn {
+          display: none;
+        }
+      }
+
+      body {
+        font-family: Arial;
+        max-width: 900px;
+        margin: auto;
+        padding: 20px;
+      }
+
+      .section {
+        margin-bottom: 25px;
+      }
+
+      input {
+        padding: 8px;
+        width: 250px;
+      }
+
+      button {
+        padding: 6px 12px;
+        cursor: pointer;
+      }
+
+      /* autocomplete */
+
+      .autocomplete {
+        position: relative;
+        width: 250px;
+      }
+
+      .autocomplete-list {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        width: 100%;
+        max-height: 150px;
+        overflow-y: auto;
+        z-index: 10;
+        display: none;
+      }
+
+      .autocomplete-item {
+        padding: 6px;
+        cursor: pointer;
+      }
+
+      .autocomplete-item:hover {
+        background: #eee;
+      }
+
+      /* package grid */
+
+      .package-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .package {
+        border: 1px solid #ccc;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+
+      .package:hover {
+        background: #f5f5f5;
+      }
+
+      .package.active {
+        border: 2px solid #339af0;
+        background: #d0ebff;
+      }
+
+      /* total price */
+
+      .total-box {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        text-align: center;
+      }
+
+      .total-price {
+        font-size: 28px;
+        font-weight: bold;
+        color: #e03131;
+      }
+
+      /* BILL PRINT */
+
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+
+      #bill {
+        width: 148mm;
+        min-height: 200mm;
+
+        padding: 10mm;
+        box-sizing: border-box;
+
+        margin: auto;
+
+        display: flex;
+        flex-direction: column;
+      }
+      .bill-frame {
+        border: 1px solid black;
+        min-height: 100%;
+
+        padding: 10mm;
+        box-sizing: border-box;
+
+        display: flex;
+        flex-direction: column;
+      }
+
+      .bill-content {
+        flex: 1;
+      }
+
+      .title {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+      }
+
+      .subtitle {
+        text-align: center;
+        margin-bottom: 15px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        margin: 6px 0;
+      }
+
+      .total {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .signature {
+        margin-top: 50mm;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .signbox {
+        text-align: center;
+      }
+
+      .print-btn {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      @media print {
+        .print-btn {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Tạo hóa đơn</h1>
+
+    <!-- GUEST -->
+
+    <div class="section">
+      <b>Khách hàng</b>
+
+      <div class="autocomplete">
+        <input id="guestSearch" placeholder="Tìm khách..." oninput="searchGuest()" />
+
+        <div id="guestList" class="autocomplete-list"></div>
+      </div>
+    </div>
+
+    <!-- RECEPTIONIST -->
+
+    <div class="section">
+      <b>Lễ tân</b><br />
+
+      <input id="receptionist" readonly />
+    </div>
+
+    <!-- DISCOUNT -->
+
+    <div class="section">
+      <b>Giảm giá (%)</b><br />
+
+      <input id="discount" type="number" min="0" value="0" oninput="calculateFinal()" />
+
+      <br /><br />
+
+      <button onclick="setPercent(0)">0%</button>
+      <button onclick="setPercent(10)">10%</button>
+      <button onclick="setPercent(20)">20%</button>
+      <button onclick="setPercent(30)">30%</button>
+    </div>
+
+    <!-- PACKAGE -->
+
+    <div class="section">
+      <h3>Chọn gói tập</h3>
+
+      <div id="packageList" class="package-grid"></div>
+    </div>
+
+    <!-- TOTAL -->
+
+    <div class="total-box">
+      <div>Tổng tiền</div>
+
+      <div id="final_price" class="total-price">0đ</div>
+    </div>
+
+    <br />
+
+    <button onclick="createBill()">Tạo hóa đơn</button>
+
+    <!-- BILL LAYOUT -->
+
+    <div id="billLayout" style="display: none">
+      <div id="bill">
+        <div class="bill-frame">
+          <div class="bill-content">
+            <div class="title">Exotic Gym Center</div>
+            <div class="subtitle">HÓA ĐƠN THANH TOÁN</div>
+            <hr />
+            <div class="row">
+              <span>Mã hóa đơn</span>
+              <span id="bill_id"></span>
+            </div>
+            <div class="row">
+              <span>Ngày</span>
+              <span id="bill_date"></span>
+            </div>
+            <div class="row">
+              <span>Khách hàng</span>
+              <span id="bill_guest"></span>
+            </div>
+            <div class="row">
+              <span>Gói tập</span>
+              <span id="bill_package"></span>
+            </div>
+            <hr />
+            <div class="row">
+              <span>Giá gốc</span>
+              <span id="bill_original"></span>
+            </div>
+            <div class="row">
+              <span>Giảm giá</span>
+              <span id="bill_discount"></span>
+            </div>
+            <div class="row total">
+              <span>Tổng tiền</span>
+              <span id="bill_final"></span>
+            </div>
+            <hr />
+            <div class="row">
+              <span>Lễ tân</span>
+              <span id="bill_receptionist"></span>
+            </div>
+          </div>
+          <div class="signature">
+            <div class="signbox">Khách hàng<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
+            <div class="signbox">Lễ tân<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
+          </div>
+          <div class="print-btn">
+            <button onclick="window.print()">In hóa đơn</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let guests = [];
+      let packages = [];
+      let selectedGuest = null;
+      let selectedPackage = null;
+      let receptionist = null;
+
+      function formatMoney(n) {
+        return Number(n).toLocaleString("vi-VN") + "đ";
+      }
+
+      async function loadUser() {
+        const res = await fetch("/api/me");
+        const user = await res.json();
+        receptionist = user.id;
+        document.getElementById("receptionist").value = user.name;
+      }
+
+      async function loadGuests() {
+        const res = await fetch("/api/customer");
+        guests = await res.json();
+      }
+
+      function renderGuest(data) {
+        const list = document.getElementById("guestList");
+        list.innerHTML = "";
+        if (data.length === 0) {
+          list.style.display = "none";
+          return;
+        }
+        data.forEach((g) => {
+          const div = document.createElement("div");
+          div.className = "autocomplete-item";
+          div.innerHTML = `
+      ${g.name} - ${g.phone}
+      `;
+          div.onclick = () => selectGuest(g.id, g.name);
+          list.appendChild(div);
+        });
+        list.style.display = "block";
+      }
+
+      async function searchGuest() {
+        const keyword = document.getElementById("guestSearch").value;
+        const list = document.getElementById("guestList");
+        if (keyword.length < 2) {
+          list.innerHTML = "";
+          list.style.display = "none";
+          return;
+        }
+        const res = await fetch(`/api/customer?search=${keyword}`);
+        const data = await res.json();
+        renderGuest(data);
+      }
+
+      function selectGuest(id, name) {
+        selectedGuest = id;
+        document.getElementById("guestSearch").value = name;
+        const list = document.getElementById("guestList");
+        list.innerHTML = "";
+        list.style.display = "none";
+      }
+
+      async function loadPackages() {
+        const res = await fetch("/api/package");
+        packages = await res.json();
+        const list = document.getElementById("packageList");
+        packages.forEach((p) => {
+          const div = document.createElement("div");
+          div.className = "package";
+          div.innerHTML = `
+      <h4>${p.name}</h4>
+      <div>${formatMoney(p.price)}</div>
+      `;
+          div.onclick = () => selectPackage(div, p);
+          list.appendChild(div);
+        });
+      }
+
+      function selectPackage(element, p) {
+        document.querySelectorAll(".package").forEach((e) => e.classList.remove("active"));
+        element.classList.add("active");
+        selectedPackage = p;
+        calculateFinal();
+      }
+
+      function calculateFinal() {
+        if (!selectedPackage) return;
+        const discount = Number(document.getElementById("discount").value || 0) / 100;
+        const final = selectedPackage.price - selectedPackage.price * discount;
+        document.getElementById("final_price").innerText = formatMoney(final);
+      }
+
+      function setPercent(percent) {
+        document.getElementById("discount").value = percent;
+        calculateFinal();
+      }
+
+      async function createBill() {
+        const discount = Number(document.getElementById("discount").value || 0);
+        const final = selectedPackage.price - selectedPackage.price * (discount / 100);
+        const res = await fetch("/api/bill", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id_guest: selectedGuest,
+            id_receptionist: receptionist,
+            id_package: selectedPackage.id,
+            original_price: selectedPackage.price,
+            discount: discount,
+            final_price: final,
+          }),
+        });
+        const bill = await res.json();
+        showBill(bill.id, final, discount);
+      }
+
+      function showBill(id, final, discount) {
+        const guestName = document.getElementById("guestSearch").value;
+        const receptionistName = document.getElementById("receptionist").value;
+        document.body.innerHTML = document.getElementById("billLayout").innerHTML;
+        document.getElementById("bill_id").innerText = "GYM-" + String(id).padStart(6, "0");
+        document.getElementById("bill_guest").innerText = guestName;
+        document.getElementById("bill_package").innerText = selectedPackage.name;
+        document.getElementById("bill_original").innerText = formatMoney(selectedPackage.price);
+        document.getElementById("bill_discount").innerText = discount + "%";
+        document.getElementById("bill_final").innerText = formatMoney(final);
+        document.getElementById("bill_receptionist").innerText = receptionistName;
+        document.getElementById("bill_date").innerText = new Date().toLocaleDateString("vi-VN");
+      }
+
+      window.onafterprint = function () {
+        location.href = "/admin/checkout";
+      };
+
+      loadUser();
+      loadGuests();
+      loadPackages();
+    </script>
+  </body>
+</html>
