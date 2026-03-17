@@ -1,28 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+    <style>
+      .customer-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        align-items: start;
+      }
+
+      .form-left {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .form-left input {
+        padding: 8px;
+      }
+
+      .save-btn {
+        margin-top: 10px;
+        padding: 10px;
+        background: #27ae60;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .form-right {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+    </style>
   </head>
+
   <body>
-    <h1>Sửa Nhân Viên</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <form id="form">
-      ID<br />
-      <input id="id" name="id" readonly /><br />
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
-      Tên<br />
-      <input id="name" name="name" /><br />
+      <!-- CONTENT -->
+      <main class="content">
+        <div class="page-header">
+          <h1>Sửa Nhân Viên</h1>
+        </div>
 
-      SĐT<br />
-      <input id="phone" name="phone" /><br />
+        <div class="card">
+          <form id="form" class="customer-form">
+            <!-- LEFT -->
+            <div class="form-left">
+              <label>ID</label><br />
+              <input id="id" name="id" readonly /><br />
 
-      <button>SAVE</button>
-      <button type="button" onclick="deleteCustomer()">DELETE</button>
-    </form>
+              <label>SĐT</label>
+              <input id="phone" name="phone" /><br />
+
+              <label>Tên </label>
+              <input id="name" name="name" /><br />
+
+              <button class="save-btn">Save</button>
+              <button type="button" class="delete-btn" onclick="deleteStaff()">Delete</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
 
     <script>
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
+
       const params = new URLSearchParams(location.search);
 
       const id = params.get("id");
@@ -58,7 +155,7 @@
         location.href = "/admin/staff/edit?id=" + id;
       };
 
-      async function deleteCustomer() {
+      async function deleteStaff() {
         await fetch("/api/staff/" + id, {
           method: "DELETE",
         });

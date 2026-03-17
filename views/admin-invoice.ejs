@@ -1,38 +1,311 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <title>Danh sách hóa đơn</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
   </head>
+  <style>
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #bill {
+        width: 148mm;
+        min-height: 200mm;
+        border: none;
+        page-break-after: avoid;
+      }
+      button {
+        display: none;
+      }
+      .print-btn {
+        display: none;
+      }
+    }
 
+    /* BILL PRINT */
+
+    @page {
+      size: A5 portrait;
+      margin: 0;
+    }
+
+    #bill {
+      width: 148mm;
+      min-height: 200mm;
+
+      padding: 10mm;
+      box-sizing: border-box;
+
+      margin: auto;
+
+      display: flex;
+      flex-direction: column;
+    }
+    .bill-frame {
+      border: 1px solid black;
+      min-height: 100%;
+
+      padding: 10mm;
+      box-sizing: border-box;
+
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bill-content {
+      flex: 1;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+
+    .total {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .signature {
+      margin-top: 50mm;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .signbox {
+      text-align: center;
+    }
+
+    .print-btn {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    @media print {
+      .print-btn {
+        display: none;
+      }
+    }
+    .filter-bar {
+      display: flex;
+      align-items: end;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+    }
+
+    .filter-item input {
+      padding: 6px;
+      width: 160px;
+    }
+
+    .filter-bar button {
+      padding: 7px 16px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .filter-bar button:hover {
+      background: #2c80b4;
+    }
+  </style>
   <body>
-    <h1>Danh sách hóa đơn</h1>
-    Từ ngày
-    <input type="date" id="from" />
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    Đến ngày
-    <input type="date" id="to" />
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
-    <button onclick="bill_filter()">Lọc</button>
-    <table border="1">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Khách</th>
-          <th>Lễ tân</th>
-          <th>Gói</th>
-          <th>Giá gốc</th>
-          <th>Discount</th>
-          <th>Giá cuối</th>
-          <th>Ngày</th>
-          <th>Xem</th>
-        </tr>
-      </thead>
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="page-title">
+            <h1>Danh Sách Hóa Đơn</h1>
+          </div>
 
-      <tbody id="billTable"></tbody>
-    </table>
+          <div class="header-right">
+            <div class="user-menu" onclick="goProfile()">
+              <img id="avatar" src="https://i.pravatar.cc/40" class="avatar" />
+              <span id="username" class="username"></span>
+            </div>
 
+            <button class="logout-btn" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>Từ ngày</label>
+            <input type="date" id="from" />
+          </div>
+
+          <div class="filter-item">
+            <label>Đến ngày</label>
+            <input type="date" id="to" />
+          </div>
+
+          <button onclick="bill_filter()">Lọc</button>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+          <table>
+            <table border="1">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Khách</th>
+                  <th>Lễ tân</th>
+                  <th>Gói</th>
+                  <th>Giá gốc</th>
+                  <th>Discount</th>
+                  <th>Giá cuối</th>
+                  <th>Ngày</th>
+                  <th>In</th>
+                </tr>
+              </thead>
+
+              <tbody id="billTable">
+                <!-- DATA -->
+              </tbody>
+            </table>
+          </table>
+        </div>
+      </main>
+    </div>
+    <!-- BILL LAYOUT -->
+
+    <div id="billLayout" style="display: none">
+      <div id="bill">
+        <div class="bill-frame">
+          <div class="bill-content">
+            <div class="title">Exotic Gym Center</div>
+            <div class="subtitle">HÓA ĐƠN THANH TOÁN</div>
+            <hr />
+            <div class="row">
+              <span>Mã hóa đơn</span>
+              <span id="bill_id"></span>
+            </div>
+            <div class="row">
+              <span>Ngày</span>
+              <span id="bill_date"></span>
+            </div>
+            <div class="row">
+              <span>Khách hàng</span>
+              <span id="bill_guest"></span>
+            </div>
+            <div class="row">
+              <span>Gói tập</span>
+              <span id="bill_package"></span>
+            </div>
+            <hr />
+            <div class="row">
+              <span>Giá gốc</span>
+              <span id="bill_original"></span>
+            </div>
+            <div class="row">
+              <span>Giảm giá</span>
+              <span id="bill_discount"></span>
+            </div>
+            <div class="row total">
+              <span>Tổng tiền</span>
+              <span id="bill_final"></span>
+            </div>
+            <hr />
+            <div class="row">
+              <span>Lễ tân</span>
+              <span id="bill_receptionist"></span>
+            </div>
+          </div>
+          <div class="signature">
+            <div class="signbox">Khách hàng<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
+            <div class="signbox">Lễ tân<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
+          </div>
+          <div class="print-btn">
+            <button onclick="window.print()">In hóa đơn</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script>
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
+      async function loadCustomers() {
+        const res = await fetch("/api/customer");
+        const data = await res.json();
+        renderGuest(data);
+      }
+
+      loadCustomers();
+
+      //API
       async function loadBills() {
         const res = await fetch("/api/bills");
         const bills = await res.json();
@@ -45,26 +318,49 @@
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
-<td>${b.id}</td>
-<td>${b.guest_name}</td>
-<td>${b.receptionist_name}</td>
-<td>${b.package_name}</td>
-<td>${b.original_price}</td>
-<td>${b.discount}%</td>
-<td>${b.final_price}</td>
-<td>${b.created_at.split("T")[0]}</td>
-<td><a href="/admin/bill/view?id=${b.id}">Xem</a></td>
-`;
-
+            <td>${b.id}</td>
+            <td>${b.guest_name}</td>
+            <td>${b.receptionist_name}</td>
+            <td>${b.package_name}</td>
+            <td>${b.original_price}</td>
+            <td>${b.discount}%</td>
+            <td>${b.final_price}</td>
+            <td>${b.created_at.split("T")[0]}</td>
+            <td><button onclick="loadBill(${b.id})">In</button></td>
+            `;
           table.appendChild(tr);
         });
       }
 
       loadBills();
+
+      function formatMoney(n) {
+        return Number(n).toLocaleString("vi-VN") + "đ";
+      }
+      async function loadBill(id) {
+        const res = await fetch("/api/bills/" + id);
+        const b = await res.json();
+        console.log(b);
+        document.body.innerHTML = document.getElementById("billLayout").innerHTML;
+        document.getElementById("bill_id").innerText = "GYM-" + String(b.id).padStart(6, "0");
+        document.getElementById("bill_guest").innerText = b.guest_name;
+        document.getElementById("bill_package").innerText = b.package_name;
+        document.getElementById("bill_original").innerText = formatMoney(b.original_price);
+        document.getElementById("bill_discount").innerText = b.discount + "%";
+        document.getElementById("bill_final").innerText = formatMoney(b.final_price);
+        document.getElementById("bill_receptionist").innerText = b.receptionist_name;
+        document.getElementById("bill_date").innerText = b.created_at.split("T")[0];
+      }
+
+      window.onafterprint = function () {
+        location.href = "/admin/invoice/";
+      };
+
       async function bill_filter() {
         const from = document.getElementById("from").value;
         const to = document.getElementById("to").value;
-        let url = "/api/bills?";
+        console.log(from, to);
+        let url = "/api/bill-filter?";
         if (from) url += "from=" + from + "&";
         if (to) url += "to=" + to;
         const res = await fetch(url);
@@ -74,16 +370,16 @@
         bills.forEach((b) => {
           const tr = document.createElement("tr");
           tr.innerHTML = `
-<td>${b.id}</td>
-<td>${b.guest_name}</td>
-<td>${b.receptionist_name}</td>
-<td>${b.package_name}</td>
-<td>${b.original_price}</td>
-<td>${b.discount}%</td>
-<td>${b.final_price}</td>
-<td>${b.created_at.split("T")[0]}</td>
-<td><a href="/admin/bill/view?id=${b.id}">Xem</a></td>
-`;
+            <td>${b.id}</td>
+            <td>${b.guest_name}</td>
+            <td>${b.receptionist_name}</td>
+            <td>${b.package_name}</td>
+            <td>${b.original_price}</td>
+            <td>${b.discount}%</td>
+            <td>${b.final_price}</td>
+            <td>${b.created_at.split("T")[0]}</td>
+            <td><button onclick="loadBill(${b.id})">In</button></td>
+            `;
 
           table.appendChild(tr);
         });

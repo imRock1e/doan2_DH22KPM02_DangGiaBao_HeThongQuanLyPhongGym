@@ -1,28 +1,140 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <title>Dashboard</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
   </head>
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      border-left: 5px solid #e67e22; /* Màu cam thương hiệu */
+    }
+
+    .stat-label {
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+    }
+
+    .stat-card h2 {
+      margin: 10px 0;
+      font-size: 1.8rem;
+      color: #2c3e50;
+    }
+
+    .growth-text {
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .up {
+      color: #27ae60;
+    } /* Màu xanh nếu tăng */
+    .down {
+      color: #e74c3c;
+    } /* Màu đỏ nếu giảm */
+  </style>
 
   <body>
-    <h1>Dashboard</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <p>Xin chào admin: <span id="username"></span></p>
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
-    <button onclick="logout()">Logout</button>
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="page-title">
+            <h1>Dashboard</h1>
+          </div>
 
+          <div class="header-right">
+            <div class="user-menu" onclick="goProfile()">
+              <img id="avatar" src="https://i.pravatar.cc/40" class="avatar" />
+              <span id="username" class="username"></span>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Doanh thu ngày</span>
+            <h2 id="daily-revenue">0đ</h2>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Doanh thu tháng</span>
+            <h2 id="monthly-revenue">0đ</h2>
+            <p id="growth-month" class="growth-text"></p>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Tổng khách hàng</span>
+            <h2 id="total-guests">0</h2>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Tăng trưởng tuần</span>
+            <h2 id="growth-week" class="growth-text">0%</h2>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+          <table></table>
+        </div>
+      </main>
+    </div>
     <script>
       async function loadUser() {
-        const res = await fetch("/me");
-        const data = await res.json();
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
 
-        if (!data.logged) {
-          window.location.href = "/login";
-          return;
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
         }
-
-        document.getElementById("username").innerText = data.user.phone;
       }
 
       async function logout() {
@@ -31,6 +143,30 @@
         window.location.href = "/login";
       }
       loadUser();
+      async function loadDashboardStats() {
+        try {
+          const res = await fetch("api/admin/stats"); // API bạn cần viết ở Backend
+          const data = await res.json();
+
+          // Định dạng tiền tệ VNĐ
+          const formatter = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
+
+          document.getElementById("daily-revenue").innerText = formatter.format(data.dailyRevenue);
+          document.getElementById("monthly-revenue").innerText = formatter.format(data.monthlyRevenue);
+          document.getElementById("total-guests").innerText = data.totalGuests;
+
+          // Hiển thị tăng trưởng
+          const growthEl = document.getElementById("growth-month");
+          const prefix = data.growthMonth >= 0 ? "+" : "";
+          growthEl.innerText = `${prefix}${data.growthMonth}% so với tháng trước`;
+          growthEl.className = `growth-text ${data.growthMonth >= 0 ? "up" : "down"}`;
+        } catch (error) {
+          console.error("Lỗi tải thông số:", error);
+        }
+      }
+
+      // Gọi hàm khi load trang
+      loadDashboardStats();
     </script>
   </body>
 </html>

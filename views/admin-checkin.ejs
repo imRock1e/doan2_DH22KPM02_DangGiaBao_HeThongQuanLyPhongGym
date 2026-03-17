@@ -1,21 +1,184 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Checkin</title>
+    <title>Face Check-in</title>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+
+    <style>
+      /* Cấu hình bao quát để khóa màn hình */
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        width: 100vw;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #0f0f0f; /* Nền tối cho chuyên nghiệp */
+        overflow: hidden; /* Quan trọng: Không cho phép scroll */
+      }
+
+      .main-wrapper {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+      }
+
+      /* CỘT TRÁI: THÔNG TIN */
+      .info-section {
+        flex: 4; /* Chiếm 40% chiều ngang */
+        background: #1a1a1a;
+        color: white;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Căn giữa nội dung theo chiều dọc */
+        border-right: 1px solid #333;
+      }
+
+      .info-box {
+        background: #252525;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+      }
+
+      .info-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        text-align: center;
+      }
+
+      #avatar {
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 15px;
+        border: 3px solid #444;
+      }
+
+      .info-details {
+        width: 100%;
+        margin-top: 20px;
+      }
+
+      .info-details p {
+        margin: 12px 0;
+        font-size: 18px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .label {
+        color: #888;
+        font-weight: normal;
+      }
+
+      /* CỘT PHẢI: CAMERA & CANVAS */
+      .camera-section {
+        flex: 6; /* Chiếm 60% chiều ngang */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: #121212;
+        position: relative;
+      }
+
+      /* Container chứa cả video và canvas */
+      .camera-container {
+        position: relative;
+        width: 90%; /* Hoặc chiều rộng cố định bạn muốn, ví dụ: 500px */
+        max-width: 600px;
+        height: auto;
+        aspect-ratio: 4 / 3; /* Giữ tỉ lệ chuẩn của camera */
+        border: 5px solid #007bff;
+        border-radius: 20px;
+        overflow: hidden; /* Cắt bỏ phần thừa của video/canvas nếu to hơn khung */
+        background: #000;
+        box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+      }
+
+      /* Ép video và canvas luôn lấp đầy container mà không bị tràn */
+      video,
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover; /* Quan trọng: Ảnh sẽ lấp đầy khung mà không bị méo */
+      }
+
+      .btn-scan {
+        margin-top: 30px;
+        padding: 15px 40px;
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: #007bff;
+        border-radius: 50px;
+        transition: 0.3s;
+      }
+
+      .btn-scan:hover {
+        background: #0056b3;
+        transform: scale(1.05);
+      }
+
+      /* Trạng thái Scan */
+      .success {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 30px rgba(40, 167, 69, 0.4);
+      }
+      .fail {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 30px rgba(220, 53, 69, 0.4);
+      }
+      .status-active {
+        color: #28a745;
+        font-weight: bold;
+      }
+      .status-expired {
+        color: #dc3545;
+        font-weight: bold;
+      }
+    </style>
   </head>
 
   <body>
-    <h1>Checkin</h1>
+    <div class="main-wrapper">
+      <div class="info-section">
+        <h1 style="margin-bottom: 30px; text-align: center">Member Info</h1>
+        <div class="info-box" id="infoBox">
+          <div class="info-header">
+            <img id="avatar" src="https://via.placeholder.com/180" />
+            <div class="info-details">
+              <p><span class="label">Tên:</span> <span id="name">-</span></p>
+              <p><span class="label">SĐT:</span> <span id="phone">-</span></p>
+              <p><span class="label">Hết hạn:</span> <span id="end_date">-</span></p>
+              <p><span class="label">Trạng thái:</span> <span id="status">-</span></p>
+            </div>
+          </div>
+          <p style="margin-top: 20px; background: #333; padding: 10px; border-radius: 8px">
+            <span class="label">Ghi chú:</span> <span id="note">-</span>
+          </p>
+        </div>
+      </div>
 
-    <video id="video" width="400" autoplay></video>
-    <br /><br />
-
-    <button onclick="scan()">Scan Face</button>
-
-    <canvas id="canvas" width="400" height="300"></canvas>
-
-    <h2 id="result"></h2>
+      <div class="camera-section">
+        <div class="camera-container" id="camFrame">
+          <video id="video" autoplay muted></video>
+          <canvas id="canvas"></canvas>
+        </div>
+        <button class="btn-scan" onclick="scan()">Xác nhận khuôn mặt</button>
+      </div>
+    </div>
 
     <script>
       let modelsLoaded = false;
@@ -28,7 +191,6 @@
         ]);
 
         modelsLoaded = true;
-        console.log("AI ready");
       };
 
       const video = document.getElementById("video");
@@ -45,8 +207,9 @@
 
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-
-        ctx.drawImage(video, 0, 0, 400, 300);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const result = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
@@ -55,28 +218,54 @@
           return;
         }
 
-        const box = result.detection.box;
-
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-
         const faceVector = Array.from(result.descriptor);
 
         const res = await fetch("/api/checkin", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ face: faceVector }),
         });
 
         const data = await res.json();
+        const infoBox = document.getElementById("infoBox");
+        const camFrame = document.getElementById("camFrame"); // Khung camera
 
         if (data.customer) {
-          document.getElementById("result").innerText = "Xin chào: " + data.customer.name;
+          const c = data.customer;
+          // Hiển thị thông tin
+          document.getElementById("name").innerText = c.name;
+          document.getElementById("phone").innerText = c.phone;
+          document.getElementById("end_date").innerText = c.end_date?.split("T")[0];
+          document.getElementById("note").innerText = c.note || "Không có";
+          document.getElementById("avatar").src = c.image ? `/uploads/${c.image}` : "https://via.placeholder.com/180";
+
+          const statusEl = document.getElementById("status");
+
+          // 1. Lấy ngày hiện tại (chỉ lấy phần ngày, tháng, năm để so sánh chính xác)
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // 2. Chuyển end_date từ DB thành đối tượng Date
+          // Giả sử c.end_date có định dạng "2026-03-17" hoặc ISO string
+          const expiryDate = new Date(c.end_date);
+          expiryDate.setHours(0, 0, 0, 0);
+
+          // 3. So sánh
+          if (expiryDate >= today) {
+            statusEl.innerText = "ĐANG HOẠT ĐỘNG";
+            statusEl.className = "status-active";
+          } else {
+            statusEl.innerText = "ĐÃ HẾT HẠN";
+            statusEl.className = "status-expired";
+          }
+
+          // Hiệu ứng khung xanh khi thành công
+          camFrame.className = "camera-container success";
+          infoBox.style.borderColor = "#28a745";
         } else {
-          document.getElementById("result").innerText = "Không tìm thấy khách";
+          // Hiệu ứng khung đỏ khi thất bại
+          camFrame.className = "camera-container fail";
+          alert("Không tìm thấy thông tin khách hàng!");
         }
       }
     </script>

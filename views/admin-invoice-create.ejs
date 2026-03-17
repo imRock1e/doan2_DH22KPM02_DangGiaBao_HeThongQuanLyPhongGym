@@ -189,66 +189,129 @@
           display: none;
         }
       }
+      /* FULL HEIGHT */
+      body {
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* LAYOUT */
+      .container {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        overflow: hidden;
+      }
+
+      /* LEFT SIDE */
+      .left {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow: hidden;
+      }
+
+      /* RIGHT SIDE */
+      .right {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 10px;
+        padding: 15px;
+      }
+
+      /* PACKAGE SCROLL (chỉ phần này scroll nhẹ nếu nhiều) */
+      .package-grid {
+        overflow-y: auto;
+        max-height: 100%;
+      }
+
+      /* DISCOUNT BUTTONS */
+      .discount-btns {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+      }
+
+      /* CREATE BUTTON */
+      .create-btn {
+        padding: 12px;
+        font-size: 16px;
+        background: #339af0;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        margin-top: 20px;
+      }
+
+      .create-btn:hover {
+        background: #1c7ed6;
+      }
+
+      /* TOTAL BOX đẹp hơn */
+      .total-box {
+        margin-top: 10px;
+      }
     </style>
   </head>
 
   <body>
     <h1>Tạo hóa đơn</h1>
 
-    <!-- GUEST -->
+    <div class="container">
+      <!-- LEFT -->
+      <div class="left">
+        <!-- GUEST -->
+        <div class="section">
+          <b>Khách hàng</b>
+          <div class="autocomplete">
+            <input id="guestSearch" placeholder="Tìm khách..." oninput="searchGuest()" />
+            <div id="guestList" class="autocomplete-list"></div>
+          </div>
+        </div>
 
-    <div class="section">
-      <b>Khách hàng</b>
+        <!-- RECEPTIONIST -->
+        <div class="section">
+          <b>Lễ tân</b><br />
+          <input id="receptionist" readonly />
+        </div>
 
-      <div class="autocomplete">
-        <input id="guestSearch" placeholder="Tìm khách..." oninput="searchGuest()" />
+        <!-- PACKAGE -->
+        <div class="section">
+          <h3>Chọn gói tập</h3>
+          <div id="packageList" class="package-grid"></div>
+        </div>
+      </div>
 
-        <div id="guestList" class="autocomplete-list"></div>
+      <!-- RIGHT -->
+      <div class="right">
+        <!-- DISCOUNT -->
+        <div class="section">
+          <b>Giảm giá (%)</b><br />
+          <input id="discount" type="number" min="0" value="0" oninput="calculateFinal()" />
+
+          <div class="discount-btns">
+            <button onclick="setPercent(0)">0%</button>
+            <button onclick="setPercent(10)">10%</button>
+            <button onclick="setPercent(20)">20%</button>
+            <button onclick="setPercent(30)">30%</button>
+          </div>
+        </div>
+
+        <!-- TOTAL -->
+        <div class="total-box">
+          <div>Tổng tiền</div>
+          <div id="final_price" class="total-price">0đ</div>
+        </div>
+
+        <button class="create-btn" onclick="createBill()">Tạo hóa đơn</button>
       </div>
     </div>
-
-    <!-- RECEPTIONIST -->
-
-    <div class="section">
-      <b>Lễ tân</b><br />
-
-      <input id="receptionist" readonly />
-    </div>
-
-    <!-- DISCOUNT -->
-
-    <div class="section">
-      <b>Giảm giá (%)</b><br />
-
-      <input id="discount" type="number" min="0" value="0" oninput="calculateFinal()" />
-
-      <br /><br />
-
-      <button onclick="setPercent(0)">0%</button>
-      <button onclick="setPercent(10)">10%</button>
-      <button onclick="setPercent(20)">20%</button>
-      <button onclick="setPercent(30)">30%</button>
-    </div>
-
-    <!-- PACKAGE -->
-
-    <div class="section">
-      <h3>Chọn gói tập</h3>
-
-      <div id="packageList" class="package-grid"></div>
-    </div>
-
-    <!-- TOTAL -->
-
-    <div class="total-box">
-      <div>Tổng tiền</div>
-
-      <div id="final_price" class="total-price">0đ</div>
-    </div>
-
-    <br />
-
-    <button onclick="createBill()">Tạo hóa đơn</button>
 
     <!-- BILL LAYOUT -->
 
@@ -317,10 +380,25 @@
       }
 
       async function loadUser() {
-        const res = await fetch("/api/me");
-        const user = await res.json();
-        receptionist = user.id;
-        document.getElementById("receptionist").value = user.name;
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("receptionist").value = displayName;
+          receptionist = user.id_receptionist || user.id;
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
       }
 
       async function loadGuests() {
@@ -355,7 +433,7 @@
           list.style.display = "none";
           return;
         }
-        const res = await fetch(`/api/customer?search=${keyword}`);
+        const res = await fetch(`/api/search_customer?search=${keyword}`);
         const data = await res.json();
         renderGuest(data);
       }
@@ -439,7 +517,7 @@
       }
 
       window.onafterprint = function () {
-        location.href = "/admin/checkout";
+        location.href = "/admin/invoice/create";
       };
 
       loadUser();

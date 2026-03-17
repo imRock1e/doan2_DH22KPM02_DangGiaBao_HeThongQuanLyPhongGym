@@ -1,56 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
   </head>
+
   <body>
-    <h1>Sửa khách</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <form id="form">
-      ID<br />
-      <input id="id" readonly /><br />
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
-      Tên<br />
-      <input id="name" /><br />
+      <!-- CONTENT -->
+      <main class="content">
+        <div class="page-header">
+          <h1>Sửa khách</h1>
+        </div>
 
-      SĐT<br />
-      <input id="phone" /><br />
+        <!-- CUSTOMER INFO -->
+        <div class="card">
+          <form id="form">
+            <div class="customer-top">
+              <div class="image-box">
+                <img id="image" />
+              </div>
 
-      Ngày kết thúc<br />
-      <input type="date" id="end" /><br />
+              <div class="info-grid">
+                <div class="form-group">
+                  <label>ID</label>
+                  <input id="id" readonly />
+                </div>
 
-      Trạng thái<br />
-      <input id="status" /><br />
+                <div class="form-group">
+                  <label>Tên</label>
+                  <input id="name" />
+                </div>
 
-      Note<br />
-      <textarea id="note"></textarea><br />
+                <div class="form-group">
+                  <label>SĐT</label>
+                  <input id="phone" />
+                </div>
 
-      <img id="image" width="200" /><br /><br />
+                <div class="form-group">
+                  <label>Ngày hết hạn</label>
+                  <input type="date" id="end" />
+                </div>
 
-      <button>SAVE</button>
-      <button type="button" onclick="deleteCustomer()">DELETE</button>
-    </form>
+                <div class="form-group">
+                  <label>Trạng thái</label>
+                  <input id="status" readonly />
+                </div>
+              </div>
+            </div>
 
-    <h2>Hóa đơn</h2>
+            <div class="form-group">
+              <label>Note</label>
+              <textarea id="note"></textarea>
+            </div>
 
-    <table border="1">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Package</th>
-          <th>Giá gốc</th>
-          <th>Discount</th>
-          <th>Giá cuối</th>
-          <th>Ngày</th>
-        </tr>
-      </thead>
+            <div class="action-buttons">
+              <button class="save-btn">Save</button>
+              <button type="button" class="delete-btn" onclick="deleteCustomer()">Delete</button>
+            </div>
+          </form>
+        </div>
 
-      <tbody id="billTable"></tbody>
-    </table>
+        <!-- BILL -->
+        <div class="card bill-card">
+          <h2>Hóa đơn</h2>
 
+          <div class="bill-table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Package</th>
+                  <th>Original</th>
+                  <th>Discount</th>
+                  <th>Final</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+
+              <tbody id="billTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
     <script>
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
       const params = new URLSearchParams(location.search);
 
       const id = params.get("id");
@@ -63,7 +148,7 @@
         document.getElementById("id").value = c.id;
         document.getElementById("name").value = c.name;
         document.getElementById("phone").value = c.phone;
-        document.getElementById("end").value = c.end_date.split("T")[0];
+        document.getElementById("end").value = c.end_date?.split("T")[0] || "";
         document.getElementById("status").value = c.status;
         document.getElementById("note").value = c.note;
 

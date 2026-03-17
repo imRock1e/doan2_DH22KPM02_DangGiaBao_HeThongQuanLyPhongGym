@@ -5,6 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login</title>
   </head>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #000000, #5a5a5a);
+    }
+
+    form {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      width: 320px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    form::before {
+      content: "ĐĂNG NHẬP";
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    input:focus {
+      border-color: #191a1b;
+      box-shadow: 0 0 5px rgba(7, 7, 7, 0.5);
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: #000000;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #686869;
+    }
+
+    #error {
+      margin-top: 10px;
+      color: red;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
   <body>
     <form id="loginForm">
       <label>Số điện thoại</label>
@@ -32,8 +107,8 @@
 
       const data = await res.json();
 
-      if (data.success && data.user.role == "admin") {
-        window.location.href = "/admin-index";
+      if (data.success && (data.user.role === "admin" || data.user.role === "staff")) {
+        window.location.href = "/admin";
       } else if (data.success && data.user.role == "user") {
         window.location.href = "/index";
       } else {

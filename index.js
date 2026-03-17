@@ -34,6 +34,7 @@ app.use(express.static("public")); // Thư mục chứa CSS/JS frontend
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use("/uploads", express.static("uploads")); // Cho phép truy cập ảnh qua URL: /uploads/ten-file.png
+app.use("/photos", express.static("photos")); // Cho phép truy cập ảnh qua URL: /photos/ten-file.png
 
 // 3. CẤU HÌNH MULTER (XỬ LÝ UPLOAD ẢNH)
 const storage = multer.diskStorage({
@@ -58,12 +59,26 @@ async function getUsers() {
 // Lấy tra tài khoản qua SĐT
 async function getUserByPhone(phone) {
   try {
-    const result = await db.query("SELECT * FROM account WHERE phone = $1", [phone]);
-    let users = result.rows;
-    return users;
+    const queryText = `
+      SELECT 
+        a.*, 
+        g.name AS guest_name, 
+        r.name AS staff_name,
+        r.image AS staff_img
+      FROM account a 
+      LEFT JOIN guest g ON a.id_guest = g.id
+      LEFT JOIN receptionist r ON a.id_receptionist = r.id 
+      WHERE a.phone = $1
+      ORDER BY a.id ASC
+    `;
+
+    const result = await db.query(queryText, [phone]);
+    console.log(result.rows[0]);
+    // Trả về user đầu tiên tìm thấy (hoặc null nếu không thấy)
+    return result.rows.length > 0 ? result.rows[0] : null;
   } catch (error) {
-    console.log(error);
-    console.log("co loi getUserByPhone");
+    console.error("Lỗi tại getUserByPhone:", error);
+    return null;
   }
 }
 
@@ -154,8 +169,11 @@ app.get("/index", (req, res) => {
   res.render("index.ejs");
 });
 ////ADMIN
-app.get("/admin-index", (req, res) => {
+app.get("/admin", (req, res) => {
   res.render("admin-index.ejs");
+});
+app.get("/404", (req, res) => {
+  res.render("404.ejs");
 });
 
 //CUSTOMER
@@ -203,7 +221,6 @@ app.get("/admin/package/create", (req, res) => {
 app.get("/admin/package/edit", (req, res) => {
   res.render("admin-package-edit.ejs");
 });
-
 // 6. HỆ THỐNG API CHÍNH
 // API Đăng nhập
 app.post("/auth/login", async (req, res) => {
@@ -212,18 +229,16 @@ app.post("/auth/login", async (req, res) => {
   console.log(phone, password);
 
   const user = await getUserByPhone(phone);
-  console.log(user[0], user.length);
-
-  if (!user || user.length === 0) {
-    return res.json({ success: false });
+  if (!user) {
+    return res.json({ success: false, message: "Số điện thoại không tồn tại" });
   }
 
-  if (password !== user[0].password) {
-    return res.json({ success: false });
+  if (password !== user.password) {
+    return res.json({ success: false, message: "Sai mật khẩu" });
   }
 
-  req.session.user = user[0];
-  res.json({ success: true, user: user[0] });
+  req.session.user = user;
+  res.json({ success: true, user: user });
 });
 app.get("/logout", (req, res) => {
   req.session.destroy();
@@ -231,13 +246,97 @@ app.get("/logout", (req, res) => {
   res.json({ success: true });
 });
 app.get("/me", (req, res) => {
+  // 1. Kiểm tra nếu chưa đăng nhập
   if (!req.session.user) {
     return res.json({ logged: false });
   }
+  // 2. Danh sách các Role được phép truy cập
+  const allowedRoles = ["admin", "staff"];
+  // Kiểm tra role của user hiện tại có nằm trong danh sách không
+  if (!allowedRoles.includes(req.session.user.role)) {
+    return res.json({
+      logged: true,
+      authorized: false, // Đã đăng nhập nhưng không đủ quyền
+    });
+  }
+  // 3. Nếu hợp lệ
   res.json({
     logged: true,
-    user: req.session.user,
+    authorized: true,
+    user: req.session.user, // Chứa thông tin role, phone, v.v.
   });
+});
+
+//STATS
+app.get("/api/admin/stats", async (req, res) => {
+  try {
+    const queries = {
+      // 1. Doanh thu hôm nay
+      dailyRevenue: `
+        SELECT COALESCE(SUM(final_price), 0) as total 
+        FROM bill 
+        WHERE created_at::date = CURRENT_DATE`,
+
+      // 2. Doanh thu tháng này
+      monthlyRevenue: `
+        SELECT COALESCE(SUM(final_price), 0) as total 
+        FROM bill 
+        WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)`,
+
+      // 3. Tổng số khách hàng
+      totalGuests: `SELECT COUNT(*) as total FROM guest`,
+
+      // 4. So sánh doanh thu tháng này vs tháng trước
+      growthMonth: `
+        WITH monthly AS (
+          SELECT 
+            SUM(CASE WHEN DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE) THEN final_price ELSE 0 END) as current_m,
+            SUM(CASE WHEN DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') THEN final_price ELSE 0 END) as last_m
+          FROM bill
+        )
+        SELECT 
+          CASE 
+            WHEN last_m = 0 THEN 100 
+            ELSE ROUND(((current_m - last_m)::numeric / last_m) * 100, 2) 
+          END as percent
+        FROM monthly`,
+
+      // 5. So sánh doanh thu tuần này vs tuần trước
+      growthWeek: `
+        WITH weekly AS (
+          SELECT 
+            SUM(CASE WHEN DATE_TRUNC('week', created_at) = DATE_TRUNC('week', CURRENT_DATE) THEN final_price ELSE 0 END) as current_w,
+            SUM(CASE WHEN DATE_TRUNC('week', created_at) = DATE_TRUNC('week', CURRENT_DATE - INTERVAL '1 week') THEN final_price ELSE 0 END) as last_w
+          FROM bill
+        )
+        SELECT 
+          CASE 
+            WHEN last_w = 0 THEN 100 
+            ELSE ROUND(((current_w - last_w)::numeric / last_w) * 100, 2) 
+          END as percent
+        FROM weekly`,
+    };
+
+    // Chạy tất cả query cùng lúc để tối ưu hiệu năng
+    const [daily, monthly, guests, growthM, growthW] = await Promise.all([
+      db.query(queries.dailyRevenue),
+      db.query(queries.monthlyRevenue),
+      db.query(queries.totalGuests),
+      db.query(queries.growthMonth),
+      db.query(queries.growthWeek),
+    ]);
+
+    res.json({
+      dailyRevenue: parseInt(daily.rows[0].total),
+      monthlyRevenue: parseInt(monthly.rows[0].total),
+      totalGuests: parseInt(guests.rows[0].total),
+      growthMonth: parseFloat(growthM.rows[0].percent),
+      growthWeek: parseFloat(growthW.rows[0].percent),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi máy chủ khi truy vấn dữ liệu" });
+  }
 });
 
 // API Khách Hàng
@@ -316,7 +415,7 @@ app.post("/api/customer", upload.single("image"), async (req, res) => {
     INSERT INTO account (phone, password, role, ID_Guest)
     VALUES ($1, $2, $3, $4)
   `;
-  await db.query(query_account, [phone, "123455", "user", newID]);
+  await db.query(query_account, [phone, "123456", "user", newID]);
 
   res.json({ success: true });
 });
@@ -336,6 +435,15 @@ WHERE id = $6
 `;
   const values = [name, phone, end_date, status, note, id];
   await db.query(query, values);
+
+  const queryAccount = `
+UPDATE account
+SET 
+    phone = $1
+WHERE id_guest = $2
+`;
+  const valuesAccount = [phone, id];
+  await db.query(queryAccount, valuesAccount);
   res.json({ message: "Đã sửa khách hàng" });
 });
 // API Xóa Khách Hàng
@@ -420,12 +528,20 @@ app.get("/api/staff/:id", async (req, res) => {
 // API Thêm mới Nhân Viên
 app.post("/api/staff", async (req, res) => {
   const { name, phone } = req.body;
+  // 1. Insert vào bảng guest để lấy ID
   const query = `
     INSERT INTO receptionist (name, phone)
     VALUES ($1, $2)
     RETURNING id
   `;
-  await db.query(query, [name, phone]);
+  const result = await db.query(query, [name, phone]);
+  const newID = result.rows[0].id;
+  // 2. Tạo account
+  const query_account = `
+    INSERT INTO account (phone, password, role, id_receptionist)
+    VALUES ($1, $2, $3, $4)
+  `;
+  await db.query(query_account, [phone, "123456", "staff", newID]);
   res.json({ success: true });
 });
 //API Sửa Nhân Viên
@@ -441,11 +557,21 @@ WHERE id = $3
 `;
   const values = [name, phone, id];
   await db.query(query, values);
+
+  const queryAccount = `
+UPDATE account
+SET 
+    phone = $1
+WHERE id_receptionist = $2
+`;
+  const valuesAccount = [phone, id];
+  await db.query(queryAccount, valuesAccount);
   res.json({ message: "Đã sửa nhân viên" });
 });
 // API XÓA Nhân Viên
 app.delete("/api/staff/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  await db.query("DELETE FROM account WHERE id_guest = $1", [id]);
   await db.query("DELETE FROM receptionist WHERE id = $1", [id]);
   res.json({ message: "Đã xóa khách hàng" });
 });
@@ -472,44 +598,69 @@ ORDER BY bill.created_at DESC;
 
   res.json(result.rows);
 });
+// API Lấy bill theo id
+app.get("/api/bills/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await db.query(
+    `
+    SELECT
+    b.*,
+    g.name as guest_name,
+    p.name as package_name,
+    s.name as receptionist_name
+
+    FROM bill b
+    LEFT JOIN guest g ON b.id_guest = g.id
+    LEFT JOIN package p ON b.id_package = p.id
+    LEFT JOIN receptionist s ON b.id_receptionist = s.id
+
+    WHERE b.id = $1
+    `,
+    [id]
+  );
+  res.json(result.rows[0]);
+});
 // API Lấy hóa đơn theo ngày
 app.get("/api/bill-filter", async (req, res) => {
   const { from, to } = req.query;
 
   let sql = `
-      SELECT
-    bill.id,
-    guest.name AS guest_name,
-    receptionist.name AS receptionist_name,
-    package.name AS package_name,
-    bill.original_price,
-    bill.discount,
-    bill.final_price,
-    bill.created_at
-FROM bill
-LEFT JOIN guest ON bill.id_guest = guest.id
-LEFT JOIN receptionist ON bill.id_receptionist = receptionist.id
-LEFT JOIN package ON bill.id_package = package.id
-ORDER BY bill.created_at DESC;
-      WHERE 1=1
-    `;
+    SELECT
+      bill.id,
+      guest.name AS guest_name,
+      receptionist.name AS receptionist_name,
+      package.name AS package_name,
+      bill.original_price,
+      bill.discount,
+      bill.final_price,
+      bill.created_at
+    FROM bill
+    LEFT JOIN guest ON bill.id_guest = guest.id
+    LEFT JOIN receptionist ON bill.id_receptionist = receptionist.id
+    LEFT JOIN package ON bill.id_package = package.id
+    WHERE 1=1
+  `;
+
   const params = [];
   let i = 1;
+
   if (from) {
     sql += ` AND bill.created_at >= $${i}`;
     params.push(from);
     i++;
   }
+
   if (to) {
     sql += ` AND bill.created_at <= $${i}`;
     params.push(to + " 23:59:59");
     i++;
   }
+
   sql += ` ORDER BY bill.created_at DESC`;
+
   const result = await db.query(sql, params);
   res.json(result.rows);
 });
-
 // API Tạo Hóa Đơn
 app.post("/api/bill", async (req, res) => {
   const { id_guest, id_receptionist, id_package, discount } = req.body;
@@ -564,7 +715,7 @@ app.post("/api/bill", async (req, res) => {
 app.post("/api/checkin", async (req, res) => {
   const face = req.body.face;
 
-  const customers = await db.query("select id,name,face_embedding from guest where face_embedding is not null");
+  const customers = await db.query("select * from guest where face_embedding is not null");
 
   let bestMatch = null;
   let minDistance = 999;
@@ -595,23 +746,16 @@ app.post("/api/checkin", async (req, res) => {
 
 //API Realtime
 // API lấy khách hàng realtime
-app.get("/api/customer", async (req, res) => {
+app.get("/api/search_customer", async (req, res) => {
   const search = req.query.search || "";
-
+  const values = [`${search}%`];
   const query = `
-    SELECT id, name, phone
+    SELECT *
     FROM guest
-    WHERE
-      name ILIKE $1
-      OR phone ILIKE $1
-    ORDER BY name
-    LIMIT 10
+    WHERE name ILIKE $1
+    OR phone ILIKE $1
   `;
-
-  const values = [`%${search}%`];
-
   const result = await db.query(query, values);
-
   res.json(result.rows);
 });
 

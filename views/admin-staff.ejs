@@ -1,39 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
   </head>
+
   <body>
-    <h1>Danh sách nhân viên</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <a href="/admin/staff/create">Thêm nhân viên</a>
-    <ul id="list"></ul>
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="page-title">
+            <h1>Danh Sách Nhân Viên</h1>
+          </div>
+
+          <div class="header-right">
+            <div class="user-menu" onclick="goProfile()">
+              <img id="avatar" src="https://i.pravatar.cc/40" class="avatar" />
+              <span id="username" class="username"></span>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-bar">
+          <a style="" href="/admin/staff/create">Thêm nhân viên</a>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ảnh</th>
+                <th>ID</th>
+                <th>Tên</th>
+                <th>SĐT</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody id="staffTable">
+              <!-- DATA -->
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
     <script>
-      async function loadCustomers() {
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
+
+      async function loadStaff() {
         const res = await fetch("/api/staff");
-
         const data = await res.json();
+        const tbody = document.getElementById("staffTable");
+        tbody.innerHTML = "";
+        data.forEach((c) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+               <img src="/photos/staff/${c.image ? c.image : "default.png"}" width="40" alt="staff-img">
+            </td>
+            <td>${c.id}</td>
+            <td>${c.name}</td>
+            <td>${c.phone}</td>
 
-        const list = document.getElementById("list");
-
-        list.innerHTML = "";
-
-        data.forEach((s) => {
-          const li = document.createElement("li");
-
-          li.innerHTML = `
-${s.id} - ${s.name}
-<a href="/admin/staff/edit?id=${s.id}">Sửa</a>
-`;
-
-          list.appendChild(li);
+            <td>
+              <a href="/admin/staff/edit?id=${c.id}">Sửa</a>
+              <button onclick="deleteStaff(${c.id})">Xóa</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
       }
 
-      loadCustomers();
+      loadStaff();
+
+      //API
+      async function deleteStaff(id) {
+        await fetch("/api/staff/" + id, {
+          method: "DELETE",
+        });
+
+        location.href = "/admin/staff";
+      }
     </script>
   </body>
 </html>

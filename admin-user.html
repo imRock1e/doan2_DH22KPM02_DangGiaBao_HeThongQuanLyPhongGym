@@ -1,144 +1,97 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Quản lý khách</title>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="public/styles/style.css" />
   </head>
 
   <body>
-    <h1>Danh sách khách</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>ADMIN</h2>
 
-    <ul id="customerList"></ul>
+        <nav>
+          <a href="#">Dashboard</a>
+          <a href="#">Customers</a>
+          <a href="#">Bills</a>
+          <a href="#">Settings</a>
+        </nav>
+      </aside>
 
-    <h2>Thêm khách mới</h2>
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="page-title">
+            <h1>Customers</h1>
+          </div>
 
-    <form id="addForm">
-      <label>Tên</label>
-      <input type="text" id="newName" required />
+          <div class="header-right">
+            <div class="user-menu" onclick="goProfile()">
+              <img src="https://i.pravatar.cc/40" class="avatar" />
+              <span class="username">Gia Bao</span>
+            </div>
 
-      <label>Số điện thoại</label>
-      <input type="text" id="newPhone" required />
+            <button class="logout-btn" onclick="logout()">Logout</button>
+          </div>
+        </div>
 
-      <button type="submit">Thêm</button>
-    </form>
+        <!-- FILTER -->
+        <div class="filter-bar">
+          <input type="text" placeholder="Search name or phone" />
 
-    <h2>Sửa thông tin khách</h2>
+          <input type="date" />
 
-    <form id="editForm">
-      <label>ID</label>
-      <input type="text" id="id" readonly />
+          <select>
+            <option>Status</option>
+            <option>Active</option>
+            <option>Expired</option>
+          </select>
 
-      <label>Tên</label>
-      <input type="text" id="name" />
+          <button>Add Customer</button>
+        </div>
 
-      <label>SĐT</label>
-      <input type="text" id="phone" />
+        <!-- TABLE -->
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-      <label>Ngày bắt đầu</label>
-      <input type="date" id="start" />
-
-      <label>Ngày kết thúc</label>
-      <input type="date" id="end" />
-
-      <label>Trạng thái</label>
-      <select id="status">
-        <option value="active">Active</option>
-        <option value="expired">Expired</option>
-      </select>
-
-      <label>Note</label>
-      <textarea id="note"></textarea>
-
-      <br /><br />
-
-      <button type="button" onclick="saveCustomer()">Save</button>
-      <button type="button" onclick="deleteCustomer()">Delete</button>
-    </form>
-
-    <script>
-      let customers = [
-        { id: 1, name: "Nguyễn Văn A", phone: "0900000001", start: "2026-01-01", end: "2026-06-01", status: "active", note: "" },
-        { id: 2, name: "Trần Văn B", phone: "0900000002", start: "2026-02-01", end: "2026-07-01", status: "active", note: "VIP" },
-      ];
-
-      function renderList() {
-        const list = document.getElementById("customerList");
-        list.innerHTML = "";
-
-        customers.forEach((c) => {
-          const li = document.createElement("li");
-
-          li.innerText = c.id + " - " + c.name;
-
-          li.onclick = () => loadCustomer(c.id);
-
-          list.appendChild(li);
-        });
-      }
-
-      function loadCustomer(id) {
-        const c = customers.find((x) => x.id === id);
-
-        document.getElementById("id").value = c.id;
-        document.getElementById("name").value = c.name;
-        document.getElementById("phone").value = c.phone;
-        document.getElementById("start").value = c.start;
-        document.getElementById("end").value = c.end;
-        document.getElementById("status").value = c.status;
-        document.getElementById("note").value = c.note;
-      }
-
-      function saveCustomer() {
-        const id = parseInt(document.getElementById("id").value);
-
-        const c = customers.find((x) => x.id === id);
-
-        c.name = document.getElementById("name").value;
-        c.phone = document.getElementById("phone").value;
-        c.start = document.getElementById("start").value;
-        c.end = document.getElementById("end").value;
-        c.status = document.getElementById("status").value;
-        c.note = document.getElementById("note").value;
-
-        renderList();
-
-        alert("Đã lưu");
-      }
-
-      function deleteCustomer() {
-        const id = parseInt(document.getElementById("id").value);
-
-        customers = customers.filter((x) => x.id !== id);
-
-        renderList();
-
-        document.getElementById("editForm").reset();
-      }
-
-      document.getElementById("addForm").onsubmit = function (e) {
-        e.preventDefault();
-
-        const name = document.getElementById("newName").value;
-        const phone = document.getElementById("newPhone").value;
-
-        const newCustomer = {
-          id: Date.now(),
-          name,
-          phone,
-          start: "",
-          end: "",
-          status: "active",
-          note: "",
-        };
-
-        customers.push(newCustomer);
-
-        renderList();
-
-        this.reset();
-      };
-
-      renderList();
-    </script>
+            <tbody>
+              <!-- DEMO DATA -->
+              <script>
+                for (let i = 1; i <= 50; i++) {
+                  document.write(`
+              <tr>
+                <td>${i}</td>
+                <td>Customer ${i}</td>
+                <td>09000000${i}</td>
+                <td>Active</td>
+                <td>01-03-2026</td>
+                <td>01-04-2026</td>
+                <td>
+                  <button>Edit</button>
+                  <button>Delete</button>
+                </td>
+              </tr>
+              `);
+                }
+              </script>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
   </body>
 </html>

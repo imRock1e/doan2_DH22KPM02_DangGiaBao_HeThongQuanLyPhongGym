@@ -1,30 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/face-api.js/dist/face-api.min.js"></script>
+
+    <style>
+      .customer-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        align-items: start;
+      }
+
+      .form-left {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .form-left input {
+        padding: 8px;
+      }
+
+      .preview-box {
+        margin-top: 10px;
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        background: #fafafa;
+      }
+
+      .preview-box canvas {
+        max-width: 100%;
+      }
+
+      .save-btn {
+        margin-top: 10px;
+        padding: 10px;
+        background: #27ae60;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .form-right {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .camera-box {
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #ddd;
+        background: black;
+      }
+
+      .camera-box video {
+        width: 100%;
+        height: 350px;
+        object-fit: cover;
+      }
+
+      .capture-btn {
+        padding: 10px;
+        background: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+    </style>
   </head>
+
   <body>
-    <h1>Thêm khách</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <form id="form">
-      Tên<br />
-      <input name="name" /><br />
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
-      SĐT<br />
-      <input name="phone" /><br /><br />
+      <!-- CONTENT -->
+      <main class="content">
+        <div class="page-header">
+          <h1>Thêm khách</h1>
+        </div>
 
-      <video id="video" width="400" autoplay></video><br />
-      <button type="button" onclick="capture()">Chụp</button><br /><br />
+        <div class="card">
+          <form id="form" class="customer-form">
+            <!-- LEFT -->
+            <div class="form-left">
+              <label>Tên</label>
+              <input name="name" required />
 
-      <canvas id="canvas" width="400" height="300"></canvas><br />
+              <label>SĐT</label>
+              <input name="phone" required />
 
-      <button>Save</button>
-    </form>
+              <div class="preview-box">
+                <canvas id="canvas" width="400" height="300"></canvas>
+              </div>
+
+              <button class="save-btn">Save</button>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="form-right">
+              <div class="camera-box">
+                <video id="video" autoplay></video>
+              </div>
+
+              <button type="button" class="capture-btn" onclick="capture()">Chụp khuôn mặt</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
 
     <script>
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
+
       let modelsLoaded = false;
       let faceVector = null;
       let video;
@@ -43,12 +185,9 @@
         ]);
 
         console.log("Models loaded");
+
         modelsLoaded = true;
       };
-
-      navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-        video.srcObject = stream;
-      });
 
       async function capture() {
         if (!modelsLoaded) {
@@ -60,6 +199,7 @@
         const ctx = canvas.getContext("2d");
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         ctx.drawImage(video, 0, 0, 400, 300);
 
         const result = await faceapi
@@ -67,9 +207,7 @@
           .withFaceLandmarks()
           .withFaceDescriptor();
 
-        console.log(result); // debug
-
-        if (result === undefined || result === null) {
+        if (!result) {
           alert("Không nhận diện được khuôn mặt");
           return;
         }
@@ -81,16 +219,16 @@
         ctx.strokeStyle = "red";
         ctx.lineWidth = 3;
         ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-        console.log("Face vector:", faceVector);
       }
 
       document.getElementById("form").onsubmit = async (e) => {
         e.preventDefault();
+
         if (!faceVector) {
           alert("Hãy chụp khuôn mặt trước");
           return;
         }
+
         const canvas = document.getElementById("canvas");
 
         const tempCanvas = document.createElement("canvas");

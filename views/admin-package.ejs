@@ -1,39 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Exotic Dashboard</title>
+    <link rel="stylesheet" href="/styles/style.css" />
   </head>
+
   <body>
-    <h1>Danh sách gói tập</h1>
+    <div class="admin">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <h2>EXOTIC CENTER</h2>
 
-    <a href="/admin/package/create">Thêm gói tập</a>
-    <ul id="list"></ul>
+        <nav>
+          <a href="/admin">Dashboard</a>
+          <a href="/admin/checkin" target="_blank">Trang Checkin</a>
+          <a href="/admin/customer">Khách hàng</a>
+          <a href="/admin/invoice">Hóa đơn</a>
+          <a href="/admin/package">Gói tập</a>
+          <a href="/admin/staff">Nhân Viên</a>
+          <a href="/admin/invoice/create" target="_blank">Tạo Hóa đơn</a>
+        </nav>
+      </aside>
 
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- HEADER -->
+        <div class="header">
+          <div class="page-title">
+            <h1>Danh Sách Gói Tập</h1>
+          </div>
+
+          <div class="header-right">
+            <div class="user-menu" onclick="goProfile()">
+              <img id="avatar" src="https://i.pravatar.cc/40" class="avatar" />
+              <span id="username" class="username"></span>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="filter-bar">
+          <a style="" href="/admin/package/create">Thêm gói tập</a>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Tên gói</th>
+                <th>Thời hạn</th>
+                <th>Giá</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody id="packageTable">
+              <!-- DATA -->
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
     <script>
-      async function loadCustomers() {
+      async function loadUser() {
+        try {
+          const res = await fetch("/me");
+          const data = await res.json();
+          // Chưa đăng nhập -> đá về login
+          if (!data.logged || !data.authorized) {
+            window.location.href = "/404";
+            return;
+          }
+          // Hiển thị thông tin nếu hợp lệ
+          const user = data.user;
+          const displayName = user.staff_name || "Admin";
+          document.getElementById("username").innerText = displayName;
+          const avatarElement = document.getElementById("avatar");
+
+          if (user.role === "staff" || user.id_receptionist) {
+            // Nếu là nhân viên
+            avatarElement.src = `/photos/staff/${user.image || "default.png"}`;
+          }
+          // (Tùy chọn) Ẩn hiện tính năng dựa trên Role cụ thể
+          if (data.user.role === "admin") {
+            console.log("Chào sếp!");
+          }
+        } catch (error) {
+          console.error("Lỗi kết nối:", error);
+        }
+      }
+
+      async function logout() {
+        await fetch("/logout");
+        window.location.href = "/login";
+      }
+
+      loadUser();
+
+      async function loadPackage() {
         const res = await fetch("/api/package");
-
         const data = await res.json();
-
-        const list = document.getElementById("list");
-
-        list.innerHTML = "";
-
-        data.forEach((p) => {
-          const li = document.createElement("li");
-
-          li.innerHTML = `
-${p.id} - ${p.name}
-<a href="/admin/package/edit?id=${p.id}">Sửa</a>
-`;
-
-          list.appendChild(li);
+        const tbody = document.getElementById("packageTable");
+        tbody.innerHTML = "";
+        data.forEach((c) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            
+            <td>${c.id}</td>
+            <td>${c.name}</td>
+            <td>${c.duration_month}</td>
+            <td>${c.price}</td>
+            <td>
+              <a href="/admin/package/edit?id=${c.id}">Sửa</a>
+              <button onclick="deletePackage(${c.id})">Xóa</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
       }
 
-      loadCustomers();
+      loadPackage();
+
+      //API
+      async function deletePackage(id) {
+        await fetch("/api/package/" + id, {
+          method: "DELETE",
+        });
+
+        location.href = "/admin/package";
+      }
     </script>
   </body>
 </html>
