@@ -42,18 +42,19 @@
         </div>
 
         <!-- FILTER -->
-        <div class="filter-bar">
+        <div class="filter-bar" style="grid-template-columns: 1fr auto">
           <input id="guestSearch" type="text" placeholder="Search name or phone" oninput="searchGuest()" />
 
-          <input type="date" />
+          <%/* <input type="date" />
 
           <select>
             <option>Status</option>
             <option>Active</option>
             <option>Expired</option>
           </select>
+          */ %>
 
-          <a href="/admin/customer/create">Thêm Khách Hàng</a>
+          <a class="btn btn-add" href="/admin/customer/create">Thêm Khách Hàng</a>
         </div>
 
         <!-- TABLE -->
@@ -162,8 +163,8 @@
             <td>${c.end_date?.split("T")[0] || ""}</td>
             <td>${c.status || ""}</td>
             <td>
-              <a href="/admin/customer/edit?id=${c.id}">Sửa</a>
-              <button onclick="deleteCustomer(${c.id})">Xóa</button>
+              <a class="btn btn-edit" href="/admin/customer/edit?id=${c.id}">Sửa</a>
+              <button class="btn btn-delete" onclick="deleteCustomer(${c.id})">Xóa</button>
             </td>
           `;
           tbody.appendChild(tr);

@@ -42,8 +42,8 @@
         </div>
 
         <!-- FILTER -->
-        <div class="filter-bar">
-          <a style="" href="/admin/package/create">Thêm gói tập</a>
+        <div class="filter-bar" style="grid-template-columns: auto 1fr">
+          <a class="btn btn-add" href="/admin/package/create">Thêm gói tập</a>
         </div>
 
         <!-- TABLE -->
@@ -116,8 +116,8 @@
             <td>${c.duration_month}</td>
             <td>${c.price}</td>
             <td>
-              <a href="/admin/package/edit?id=${c.id}">Sửa</a>
-              <button onclick="deletePackage(${c.id})">Xóa</button>
+              <a class="btn btn-edit" href="/admin/package/edit?id=${c.id}">Sửa</a>
+              <button class="btn btn-delete" onclick="deletePackage(${c.id})">Xóa</button>
             </td>
           `;
           tbody.appendChild(tr);

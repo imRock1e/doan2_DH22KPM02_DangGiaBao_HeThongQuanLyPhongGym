@@ -257,7 +257,7 @@
             <div class="signbox">Lễ tân<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
           </div>
           <div class="print-btn">
-            <button onclick="window.print()">In hóa đơn</button>
+            <button class="btn btn-edit" onclick="window.print()">In hóa đơn</button>
           </div>
         </div>
       </div>
@@ -320,13 +320,13 @@
           tr.innerHTML = `
             <td>${b.id}</td>
             <td>${b.guest_name}</td>
-            <td>${b.receptionist_name}</td>
+            <td>${b.receptionist_name || "Admin"}</td>
             <td>${b.package_name}</td>
             <td>${b.original_price}</td>
             <td>${b.discount}%</td>
             <td>${b.final_price}</td>
             <td>${b.created_at.split("T")[0]}</td>
-            <td><button onclick="loadBill(${b.id})">In</button></td>
+            <td><button class="btn btn-edit" onclick="loadBill(${b.id})">In</button></td>
             `;
           table.appendChild(tr);
         });

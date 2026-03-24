@@ -26,8 +26,7 @@
 
       body {
         font-family: Arial;
-        max-width: 900px;
-        margin: auto;
+        margin: 0;
         padding: 20px;
       }
 
@@ -191,8 +190,6 @@
       }
       /* FULL HEIGHT */
       body {
-        height: 100vh;
-        overflow: hidden;
         display: flex;
         flex-direction: column;
       }
@@ -362,7 +359,7 @@
             <div class="signbox">Lễ tân<br />(Ký Tên)<br /><br /><br /><br /><br /><br /></div>
           </div>
           <div class="print-btn">
-            <button onclick="window.print()">In hóa đơn</button>
+            <button class="btn btn-edit" onclick="window.print()">In hóa đơn</button>
           </div>
         </div>
       </div>
@@ -390,7 +387,7 @@
           const user = data.user;
           const displayName = user.staff_name || "Admin";
           document.getElementById("receptionist").value = displayName;
-          receptionist = user.id_receptionist || user.id;
+          receptionist = user.id_receptionist || null;
         } catch (error) {
           console.error("Lỗi kết nối:", error);
         }
@@ -482,24 +479,28 @@
       }
 
       async function createBill() {
-        const discount = Number(document.getElementById("discount").value || 0);
-        const final = selectedPackage.price - selectedPackage.price * (discount / 100);
-        const res = await fetch("/api/bill", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id_guest: selectedGuest,
-            id_receptionist: receptionist,
-            id_package: selectedPackage.id,
-            original_price: selectedPackage.price,
-            discount: discount,
-            final_price: final,
-          }),
-        });
-        const bill = await res.json();
-        showBill(bill.id, final, discount);
+        if (selectedGuest == null) {
+          location.href = "/admin/invoice/create";
+        } else {
+          const discount = Number(document.getElementById("discount").value || 0);
+          const final = selectedPackage.price - selectedPackage.price * (discount / 100);
+          const res = await fetch("/api/bill", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id_guest: selectedGuest,
+              id_receptionist: receptionist,
+              id_package: selectedPackage.id,
+              original_price: selectedPackage.price,
+              discount: discount,
+              final_price: final,
+            }),
+          });
+          const bill = await res.json();
+          showBill(bill.id, final, discount);
+        }
       }
 
       function showBill(id, final, discount) {

@@ -42,8 +42,8 @@
         </div>
 
         <!-- FILTER -->
-        <div class="filter-bar">
-          <a style="" href="/admin/staff/create">Thêm nhân viên</a>
+        <div class="filter-bar" style="grid-template-columns: auto 1fr">
+          <a class="btn btn-add" href="/admin/staff/create">Thêm nhân viên</a>
         </div>
 
         <!-- TABLE -->
@@ -118,8 +118,8 @@
             <td>${c.phone}</td>
 
             <td>
-              <a href="/admin/staff/edit?id=${c.id}">Sửa</a>
-              <button onclick="deleteStaff(${c.id})">Xóa</button>
+              <a class="btn btn-edit" href="/admin/staff/edit?id=${c.id}">Sửa</a>
+              <button class="btn btn-delete" onclick="deleteStaff(${c.id})">Xóa</button>
             </td>
           `;
           tbody.appendChild(tr);
